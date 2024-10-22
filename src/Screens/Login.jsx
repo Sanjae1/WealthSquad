@@ -20,7 +20,7 @@ const Login = () => {
 
   const loginUser = async () => {
     try {
-      const { user, error } = await supabase.auth.signIn({
+      const { user, error } = await supabase.auth.signInWithPassword({
         email: email,
         password: password,
       });
@@ -30,7 +30,7 @@ const Login = () => {
       // Handle successful login (e.g., navigate to another screen)
       console.log('User logged in:', user);
       // Navigate to your desired screen here
-       nav.navigate('Home');
+       nav.navigate ('Home');
     } catch (error) {
       console.error('Error logging in:', error.message);
       // Handle login error (e.g., show an error message to the user)
