@@ -1,6 +1,6 @@
-import { View, Text, ScrollView, TouchableOpacity, TextInput, Image, Alert } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, TextInput, Image, Alert, KeyboardAvoidingView, Platform, Keyboard } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { MyColours } from '../Utils/MyColours';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
@@ -8,7 +8,10 @@ import { supabase } from '../../supabaseClient';
 
 const Signup = () => {
   const nav = useNavigation();
+  const scrollViewRef = useRef(null);
   const [signupCredentials, setSignupCredentials] = useState({
+    firstName: "",
+    lastName: "",
     email: "",
     password: "",
     confirmPassword: ""
@@ -16,10 +19,19 @@ const Signup = () => {
   const [isVisible, setIsVisible] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
 
-  const { email, password, confirmPassword } = signupCredentials;
+  const { firstName, lastName, email, password, confirmPassword } = signupCredentials;
+
+  const handleFocus = (yPosition) => {
+    if (scrollViewRef.current) {
+      scrollViewRef.current.scrollTo({
+        y: yPosition,
+        animated: true
+      });
+    }
+  };
 
   const validateInputs = () => {
-    if (!email || !password || !confirmPassword) {
+    if (!firstName || !lastName || !email || !password || !confirmPassword) {
       Alert.alert('Error', 'Please fill in all fields');
       return false;
     }
@@ -51,6 +63,8 @@ const Signup = () => {
           { 
             user_id: userId,
             email: email,
+            first_name: firstName,
+            last_name: lastName,
             created_at: new Date().toISOString(),
             // Add any additional user data fields you need
           }
@@ -65,6 +79,7 @@ const Signup = () => {
   };
 
   const signUpUser = async () => {
+    Keyboard.dismiss();
     if (!validateInputs()) return;
 
     setIsLoading(true);
@@ -74,6 +89,8 @@ const Signup = () => {
         password,
         options: {
           data: {
+            first_name: firstName,
+            last_name: lastName,
             signed_up_at: new Date().toISOString(),
           }
         }
@@ -124,78 +141,115 @@ const Signup = () => {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: MyColours.secondary }}>
-      <ScrollView style={{ flex: 1, paddingTop: 30 }}>
-        <Image style={{ backgroundColor: "red", alignSelf: "center" }} source={require("../assets/Freshlogo.png")} />
-        <View style={{ paddingHorizontal: 20, marginTop: 1 }}>
-          <Text style={{ color: MyColours.third, fontSize: 24, fontWeight: "500" }}>Sign Up</Text>
-          <Text style={{ fontSize: 16, fontWeight: "400", color: 'grey', marginTop: 20 }}>
-            Enter your email and password to create an account
-          </Text>
-
-          <Text style={{ fontSize: 16, fontWeight: "500", color: "grey", marginTop: 40 }}>Email</Text>
-          <TextInput
-            value={email}
-            onChangeText={(val) => setSignupCredentials({ ...signupCredentials, email: val })}
-            keyboardType="email-address"
-            autoCapitalize="none"
-            style={{ borderColor: '#E3E3E3', borderBottomWidth: 2, fontSize: 16, marginTop: 10 }}
-          />
-
-          <Text style={{ fontSize: 16, fontWeight: "500", color: "grey", marginTop: 20 }}>Password</Text>
-          <View style={{ borderColor: '#E3E3E3', borderBottomWidth: 2, flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-            <TextInput
-              value={password}
-              onChangeText={(val) => setSignupCredentials({ ...signupCredentials, password: val })}
-              secureTextEntry={isVisible}
-              maxLength={13}
-              keyboardType="ascii-capable"
-              style={{ flex: 0.9, fontSize: 17, marginTop: 15 }}
-            />
-            <Ionicons
-              onPress={() => setIsVisible(!isVisible)}
-              name={isVisible ? "eye-off-outline" : 'eye-outline'}
-              size={24}
-              color="black"
-            />
-          </View>
-
-          <Text style={{ fontSize: 16, fontWeight: "500", color: "grey", marginTop: 20 }}>Confirm Password</Text>
-          <View style={{ borderColor: '#E3E3E3', borderBottomWidth: 2, flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-            <TextInput
-              value={confirmPassword}
-              onChangeText={(val) => setSignupCredentials({ ...signupCredentials, confirmPassword: val })}
-              secureTextEntry={isVisible}
-              maxLength={13}
-              keyboardType="ascii-capable"
-              style={{ flex: 0.9, fontSize: 17, marginTop: 15 }}
-            />
-          </View>
-
-          <TouchableOpacity 
-            onPress={signUpUser}
-            disabled={isLoading}
-            style={{ 
-              backgroundColor: isLoading ? MyColours.grey : MyColours.primary,
-              marginTop: 30,
-              height: 70,
-              borderRadius: 60,
-              justifyContent: 'center',
-              alignItems: 'center'
-            }}
-          >
-            <Text style={{ fontSize: 20, color: MyColours.secondary }}>
-              {isLoading ? 'Creating Account...' : 'Sign Up'}
+      <KeyboardAvoidingView 
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        style={{ flex: 1 }}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 100 : 20}
+      >
+        <ScrollView 
+          ref={scrollViewRef}
+          style={{ flex: 1, paddingTop: 20 }}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ paddingBottom: 40 }}
+        >
+          <Image style={{ alignSelf: "center", width: 2, aspectRatio: 140, height: 140, resizeMode:'contain' }} source={require("../assets/FreshStart_LOGO.png")} />
+          <View style={{ paddingHorizontal: 20, marginTop: 1 }}>
+            <Text style={{ color: MyColours.third, fontSize: 24, fontWeight: "500" }}>Sign Up</Text>
+            <Text style={{ fontSize: 16, fontWeight: "400", color: 'grey', marginTop: 15, marginBottom: 10 }}>
+              Enter your details to create an account
             </Text>
-          </TouchableOpacity>
 
-          <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginTop: 20 }}>
-            <Text style={{ fontSize: 16 }}>Already have an account?</Text>
-            <TouchableOpacity onPress={() => nav.navigate('Login')}>
-              <Text style={{ fontSize: 16, color: MyColours.primary, fontWeight: "600" }}> Login</Text>
+            {/* First Name Field */}
+            <Text style={{ fontSize: 16, fontWeight: "500", color: "grey", marginTop: 20 }}>First Name</Text>
+            <TextInput
+              value={firstName}
+              onChangeText={(val) => setSignupCredentials({ ...signupCredentials, firstName: val })}
+              autoCapitalize="words"
+              style={{ borderColor: '#E3E3E3', borderBottomWidth: 2, fontSize: 16, marginTop: 10, paddingBottom: 8 }}
+              onFocus={() => handleFocus(150)}
+            />
+
+            {/* Last Name Field */}
+            <Text style={{ fontSize: 16, fontWeight: "500", color: "grey", marginTop: 20 }}>Last Name</Text>
+            <TextInput
+              value={lastName}
+              onChangeText={(val) => setSignupCredentials({ ...signupCredentials, lastName: val })}
+              autoCapitalize="words"
+              style={{ borderColor: '#E3E3E3', borderBottomWidth: 2, fontSize: 16, marginTop: 10, paddingBottom: 8 }}
+              onFocus={() => handleFocus(230)}
+            />
+
+            {/* Email Field */}
+            <Text style={{ fontSize: 16, fontWeight: "500", color: "grey", marginTop: 20 }}>Email</Text>
+            <TextInput
+              value={email}
+              onChangeText={(val) => setSignupCredentials({ ...signupCredentials, email: val })}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              style={{ borderColor: '#E3E3E3', borderBottomWidth: 2, fontSize: 16, marginTop: 10, paddingBottom: 8 }}
+              onFocus={() => handleFocus(310)}
+            />
+
+            {/* Password Field */}
+            <Text style={{ fontSize: 16, fontWeight: "500", color: "grey", marginTop: 20 }}>Password</Text>
+            <View style={{ borderColor: '#E3E3E3', borderBottomWidth: 2, flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+              <TextInput
+                value={password}
+                onChangeText={(val) => setSignupCredentials({ ...signupCredentials, password: val })}
+                secureTextEntry={isVisible}
+                maxLength={13}
+                keyboardType="ascii-capable"
+                style={{ flex: 0.9, fontSize: 17, marginTop: 10, paddingBottom: 8 }}
+                onFocus={() => handleFocus(390)}
+              />
+              <Ionicons
+                onPress={() => setIsVisible(!isVisible)}
+                name={isVisible ? "eye-off-outline" : 'eye-outline'}
+                size={24}
+                color="black"
+              />
+            </View>
+
+            {/* Confirm Password Field */}
+            <Text style={{ fontSize: 16, fontWeight: "500", color: "grey", marginTop: 20 }}>Confirm Password</Text>
+            <View style={{ borderColor: '#E3E3E3', borderBottomWidth: 2, flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+              <TextInput
+                value={confirmPassword}
+                onChangeText={(val) => setSignupCredentials({ ...signupCredentials, confirmPassword: val })}
+                secureTextEntry={isVisible}
+                maxLength={13}
+                keyboardType="ascii-capable"
+                style={{ flex: 0.9, fontSize: 17, marginTop: 10, paddingBottom: 8 }}
+                onFocus={() => handleFocus(470)}
+              />
+            </View>
+
+            <TouchableOpacity 
+              onPress={signUpUser}
+              disabled={isLoading}
+              style={{ 
+                backgroundColor: isLoading ? MyColours.grey : MyColours.primary,
+                marginTop: 30,
+                height: 60,
+                borderRadius: 60,
+                justifyContent: 'center',
+                alignItems: 'center'
+              }}
+            >
+              <Text style={{ fontSize: 20, color: MyColours.secondary }}>
+                {isLoading ? 'Creating Account...' : 'Sign Up'}
+              </Text>
             </TouchableOpacity>
+
+            <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginTop: 20, marginBottom: 10 }}>
+              <Text style={{ fontSize: 16 }}>Already have an account?</Text>
+              <TouchableOpacity onPress={() => nav.navigate('Login')}>
+                <Text style={{ fontSize: 16, color: MyColours.primary, fontWeight: "600" }}> Login</Text>
+              </TouchableOpacity>
+            </View>
           </View>
-        </View>
-      </ScrollView>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 };

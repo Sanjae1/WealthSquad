@@ -1,60 +1,48 @@
-import React, { useState } from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Modal } from 'react-native';
+import React from 'react';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialIcons';
-import { useNavigation } from '@react-navigation/native'; // Import navigation
+import { useNavigation } from '@react-navigation/native';
+import { useUser, useSupabaseClient } from '@supabase/auth-helpers-react';
+import RecentTransactions from '../Components/RecentTransaction';
 
 const Home = () => {
-  const [isDropdownVisible, setDropdownVisible] = useState(false);
-  const navigation = useNavigation(); // Hook for navigation
+  // Get navigation object for screen transitions
+  const navigation = useNavigation();
+  
+  // Get current authenticated user from Supabase
+  const user = useUser();
+  
+  // Get Supabase client for auth operations
+  const supabase = useSupabaseClient();
 
-  const toggleDropdown = () => {
-    setDropdownVisible(!isDropdownVisible);
-  };
-
-  const handleLogout = () => {
-    // Perform any necessary logout actions (e.g., clearing user data, tokens)
-    console.log('User logged out');
-
-    // Hide dropdown
-    setDropdownVisible(false);
-
-    // Redirect to the Login screen
-    navigation.replace('Login'); // This will replace the current screen with the Login screen
+  // Handle user logout
+  const handleLogout = async () => {
+    try {
+      // Call Supabase signOut method
+      await supabase.auth.signOut();
+      
+      // Reset navigation stack to Login screen
+      navigation.reset({
+        index: 0,
+        routes: [{ name: 'Login' }],
+      });
+    } catch (error) {
+      console.error('Error logging out:', error.message);
+    }
   };
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView>
-        {/* Header */}
+      {/* Main scrollable content area */}
+      <ScrollView style={styles.scrollView}>
+        {/* Header section with welcome message */}
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>Hi, User!</Text>
-
-          <View style={styles.dropdownMenu}>
-            <TouchableOpacity onPress={toggleDropdown}>
-              <Icon name="more-vert" size={24} color="#000" />
-            </TouchableOpacity>
-
-            {/* Dropdown Menu */}
-            <Modal
-              transparent={true}
-              visible={isDropdownVisible}
-              animationType="fade"
-              onRequestClose={toggleDropdown}
-            >
-              <TouchableOpacity style={styles.modalOverlay} onPress={toggleDropdown}>
-                <View style={styles.dropdown}>
-                  <TouchableOpacity style={styles.dropdownItem} onPress={handleLogout}>
-                    <Icon name="logout" size={24} color="#000" />
-                    <Text style={styles.dropdownText}>Logout</Text>
-                  </TouchableOpacity>
-                </View>
-              </TouchableOpacity>
-            </Modal>
-          </View>
+          {/* Display user's name from Supabase metadata if available */}
+          <Text style={styles.headerTitle}>Welcome, {user?.user_metadata?.full_name || 'User'}!</Text>
         </View>
 
-        {/* Account Summary */}
+        {/* Account Summary section */}
         <View style={styles.accountSummary}>
           <Text style={styles.sectionTitle}>Account Summary</Text>
           <View style={styles.balanceContainer}>
@@ -63,37 +51,69 @@ const Home = () => {
           </View>
         </View>
 
-        {/* Quick Actions */}
+        {/* Quick Actions section */}
         <View style={styles.quickActions}>
           <Text style={styles.sectionTitle}>Quick Actions</Text>
           <View style={styles.actionButtonsContainer}>
+          <TouchableOpacity onPress={() => navigation.navigate('AddAccountScreen')}>
             <ActionButton icon="add" label="Add Account" />
-            <ActionButton icon="attach-money" label="Budget" />
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => navigation.navigate('BudgetPlanner')}>
+            <ActionButton icon="attach-money" label="Budget" />  
+            </TouchableOpacity>
             <ActionButton icon="trending-up" label="Investments" />
           </View>
         </View>
 
-        {/* Recent Transactions */}
-        <View style={styles.recentTransactions}>
-          <Text style={styles.sectionTitle}>Recent Transactions</Text>
-          <Transaction 
-            merchant="Grocery Store"
-            amount="-$45.67"
-            date="Today"
-            category="Food"
-          />
-          <Transaction 
-            merchant="Gas Station"
-            amount="-$30.00"
-            date="Yesterday"
-            category="Transportation"
-          />
-        </View>
+        {/* Recent Transactions section */}
+      <RecentTransactions />
       </ScrollView>
+
+      {/* 
+  // Fixed Bottom Navigation Bar 
+  <View style={styles.bottomNav}>
+    // Home navigation button 
+    <TouchableOpacity 
+      style={styles.navItem} 
+      onPress={() => navigation.navigate('Home')}
+    >
+      <Icon name="home" size={24} color="#4CAF50" />
+      <Text style={styles.navLabel}>Home</Text>
+    </TouchableOpacity>
+    
+    // Calculators navigation button 
+    <TouchableOpacity 
+      style={styles.navItem} 
+      onPress={() => navigation.navigate('Calculators')}
+    >
+      <Icon name="calculate" size={24} color="#757575" />
+      <Text style={styles.navLabel}>Calculators</Text>
+    </TouchableOpacity>
+
+    // Expenses navigation button 
+    <TouchableOpacity 
+      style={styles.navItem} 
+      onPress={() => navigation.navigate('Expenses')}
+    >
+      <Icon name="account-balance-wallet" size={24} color="#757575" />
+      <Text style={styles.navLabel}>Expenses</Text>
+    </TouchableOpacity>
+
+    // Menu navigation button 
+    <TouchableOpacity 
+      style={styles.navItem} 
+      onPress={() => navigation.navigate('Menu')}
+    >
+      <Icon name="menu" size={24} color="#757575" />
+      <Text style={styles.navLabel}>Menu</Text>
+    </TouchableOpacity>
+  </View>
+*/}
     </SafeAreaView>
   );
 };
 
+// Action button component for quick actions section
 const ActionButton = ({ icon, label }) => (
   <View style={styles.actionButton}>
     <Icon name={icon} size={24} color="#4CAF50" />
@@ -101,6 +121,7 @@ const ActionButton = ({ icon, label }) => (
   </View>
 );
 
+// Transaction component for displaying recent transactions
 const Transaction = ({ merchant, amount, date, category }) => (
   <View style={styles.transaction}>
     <View style={styles.transactionIcon}>
@@ -117,10 +138,14 @@ const Transaction = ({ merchant, amount, date, category }) => (
   </View>
 );
 
+// Styles for all components
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F5F5F5',
+  },
+  scrollView: {
+    flex: 1,
   },
   header: {
     flexDirection: 'row',
@@ -132,36 +157,6 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: 'bold',
   },
-  dropdownMenu: {
-    position: 'relative',
-  },
-  modalOverlay: {
-    flex: 1,
-    justifyContent: 'flex-start',
-    alignItems: 'flex-end',
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-  },
-  dropdown: {
-    backgroundColor: '#FFFFFF',
-    padding: 10,
-    borderRadius: 5,
-    marginTop: 50,
-    marginRight: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 5,
-  },
-  dropdownItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 10,
-  },
-  dropdownText: {
-    marginLeft: 8,
-    fontSize: 16,
-  },
   sectionTitle: {
     fontSize: 18,
     fontWeight: 'bold',
@@ -171,6 +166,13 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     padding: 16,
     marginBottom: 16,
+    borderRadius: 8,
+    marginHorizontal: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
   },
   balanceContainer: {
     alignItems: 'center',
@@ -188,6 +190,13 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     padding: 16,
     marginBottom: 16,
+    borderRadius: 8,
+    marginHorizontal: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
   },
   actionButtonsContainer: {
     flexDirection: 'row',
@@ -203,6 +212,14 @@ const styles = StyleSheet.create({
   recentTransactions: {
     backgroundColor: '#FFFFFF',
     padding: 16,
+    marginBottom: 16,
+    borderRadius: 8,
+    marginHorizontal: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
   },
   transaction: {
     flexDirection: 'row',
@@ -238,6 +255,31 @@ const styles = StyleSheet.create({
   },
   transactionDate: {
     fontSize: 12,
+    color: '#757575',
+  },
+  // Bottom navigation styles
+  bottomNav: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    paddingVertical: 8,
+    borderTopWidth: 1,
+    borderTopColor: '#E0E0E0',
+    elevation: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  navItem: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 4,
+  },
+  navLabel: {
+    fontSize: 12,
+    marginTop: 4,
     color: '#757575',
   },
 });
