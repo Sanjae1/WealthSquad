@@ -48,7 +48,7 @@ const Login = () => {
       if (error) throw error;
 
       console.log('User logged in:', user);
-      nav.navigate('Home');
+      nav.navigate('AppMain');
     } catch (error) {
       setErrorMessage(error.message || "Login failed. Please try again.");
     } finally {

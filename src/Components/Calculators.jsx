@@ -1,17 +1,23 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import MortgageCalculator from './MortgageCalculator';
-import BuyVsRentCalculator from './BuyingVsRentingCalculator';
-import CarLoanCalculator from './CarLoanCalculator';
+import MortgageCalculator from '../Screens/MortgageCalculator';
+import BuyVsRentCalculator from '../Screens/BuyingVsRentingCalculator';
+import CarLoanCalculator from '../Screens/CarLoanCalculator';
+import DebtCalculator from '../Screens/DebtCalculator';
+import GroceryCalculator from '../Screens/GroceryCalculator';
+
 
 const Calculators = () => {
   const navigation = useNavigation();
   const calculators = [
-    { title: 'Car Loan Calculator', route: 'CarLoanCalculator' },
-    { title: 'Mortgage Calculator', route: 'MortgageCalculator' },
-    { title: 'Buying Vs Renting Calculator', route: 'BuyingVsRentingCalculator' },
+    { title: 'Car Loan Calculator', route: 'Car Loan' },
+    { title: 'Mortgage Calculator', route: 'Mortgage' },
+    { title: 'Buying Vs Renting Calculator', route: 'BuyVsRent' },
+    { title: 'Grocery Calculator', route: 'Grocery' },
+    { title: 'Debt Calculator', route: 'Debt' },
   ];
+  
 
   return (
     <View style={styles.container}>
