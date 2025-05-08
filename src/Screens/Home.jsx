@@ -1,8 +1,8 @@
-import React from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
+import React, { useState, useCallback } from 'react';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialIcons'; // Using MaterialIcons as per original
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useUser, useSupabaseClient } from '@supabase/auth-helpers-react';
 import RecentTransactions from '../Components/RecentTransaction'; // Corrected path assuming Components folder
 
@@ -10,17 +10,82 @@ const Home = () => {
   const navigation = useNavigation();
   const user = useUser();
   const supabase = useSupabaseClient();
+  const [accounts, setAccounts] = useState([]);
+  const [totalBalance, setTotalBalance] = useState(0);
+  const [loading, setLoading] = useState(true);
+
+  const fetchAccounts = useCallback(async () => {
+    if (!user) {
+      console.log('No user found, skipping fetch');
+      setLoading(false);
+      return;
+    }
+
+    try {
+      console.log('Starting to fetch accounts for user:', user.id);
+      setLoading(true);
+      
+      const { data, error } = await supabase
+        .from('accounts')
+        .select('*')
+        .eq('user_id', user.id);
+
+      if (error) {
+        console.error('Supabase error fetching accounts:', error);
+        throw error;
+      }
+
+      console.log('Successfully fetched accounts:', data);
+      setAccounts(data || []);
+      
+      // Calculate total balance
+      const total = data?.reduce((sum, account) => sum + (account.balance || 0), 0) || 0;
+      console.log('Calculated total balance:', total);
+      setTotalBalance(total);
+    } catch (error) {
+      console.error('Error in fetchAccounts:', error);
+      Alert.alert('Error', 'Failed to load accounts. Please try again.');
+    } finally {
+      console.log('Setting loading to false');
+      setLoading(false);
+    }
+  }, [user, supabase]);
+
+  // Use useFocusEffect to refresh data when screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      console.log('Home screen focused, user:', user?.id);
+      fetchAccounts();
+    }, [fetchAccounts])
+  );
 
   const handleLogout = async () => {
     try {
-      await supabase.auth.signOut();
-      // Navigate back to Login in the main stack
-      navigation.reset({
-        index: 0,
-        routes: [{ name: 'Login' }],
-      });
+      Alert.alert(
+        'Logout',
+        'Are you sure you want to logout?',
+        [
+          {
+            text: 'Cancel',
+            style: 'cancel'
+          },
+          {
+            text: 'Logout',
+            onPress: async () => {
+              const { error } = await supabase.auth.signOut();
+              if (error) throw error;
+              
+              // Reset navigation to Login screen
+              navigation.reset({
+                index: 0,
+                routes: [{ name: 'Login' }],
+              });
+            }
+          }
+        ]
+      );
     } catch (error) {
-      console.error('Error logging out:', error.message);
+      Alert.alert('Error', error.message);
     }
   };
 
@@ -37,10 +102,47 @@ const Home = () => {
 
         <View style={styles.accountSummary}>
           <Text style={styles.sectionTitle}>Account Summary</Text>
-          <View style={styles.balanceContainer}>
-            <Text style={styles.balanceLabel}>Total Balance</Text>
-            <Text style={styles.balanceAmount}>$10,234.56</Text>
-          </View>
+          {loading ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color="#4CAF50" />
+              <Text style={styles.loadingText}>Loading accounts...</Text>
+            </View>
+          ) : (
+            <>
+              <View style={styles.balanceContainer}>
+                <Text style={styles.balanceLabel}>Total Balance</Text>
+                <Text style={styles.balanceAmount}>
+                  {totalBalance.toLocaleString('en-US', {
+                    style: 'currency',
+                    currency: 'JMD'
+                  })}
+                </Text>
+              </View>
+              
+              {/* List of accounts */}
+              {accounts.length > 0 ? (
+                accounts.map((account) => (
+                  <View key={account.id} style={styles.accountItem}>
+                    <View style={styles.accountInfo}>
+                      <Text style={styles.accountName}>{account.name}</Text>
+                      <Text style={styles.accountNumber}>****{account.number}</Text>
+                    </View>
+                    <Text style={[
+                      styles.accountBalance,
+                      { color: account.balance >= 0 ? '#4CAF50' : '#E74C3C' }
+                    ]}>
+                      {account.balance.toLocaleString('en-US', {
+                        style: 'currency',
+                        currency: 'JMD'
+                      })}
+                    </Text>
+                  </View>
+                ))
+              ) : (
+                <Text style={styles.noAccountsText}>No accounts added yet</Text>
+              )}
+            </>
+          )}
         </View>
 
         <View style={styles.quickActions}>
@@ -152,9 +254,49 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#333', // Darker text
   },
+  accountItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E0E0E0',
+  },
+  accountInfo: {
+    flex: 1,
+  },
+  accountName: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#333',
+  },
+  accountNumber: {
+    fontSize: 14,
+    color: '#757575',
+    marginTop: 2,
+  },
+  accountBalance: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
   // Removed recentTransactions styles if handled by component
   // Removed transaction styles if handled by component
   // REMOVED bottomNav, navItem, navLabel styles
+  loadingContainer: {
+    padding: 20,
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 10,
+    color: '#666',
+    fontSize: 14,
+  },
+  noAccountsText: {
+    textAlign: 'center',
+    color: '#757575',
+    fontSize: 16,
+    marginTop: 20,
+  },
 });
 
 

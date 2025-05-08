@@ -7,14 +7,22 @@ import { useUser, useSupabaseClient } from '@supabase/auth-helpers-react';
 import { dummyBankData } from '../Utils/DummyData';
 
 const dummyAccounts = {
-  NCB: [
+  'NCB Jamaica': [
     { id: '1', name: 'Chequing', number: '1234', balance: 5432.10 },
     { id: '2', name: 'Savings', number: '5678', balance: 12800.50 },
     { id: '3', name: 'Credit Card', number: '9012', balance: -1500.00 },
   ],
-  Scotia: [
+  'Scotiabank Jamaica': [
     { id: '4', name: 'Everyday Banking', number: '3456', balance: 2345.67 },
     { id: '5', name: 'Premium Savings', number: '7890', balance: 8900.00 },
+  ],
+  'CIBC FirstCaribbean (Jamaica)': [
+    { id: '6', name: 'Personal Chequing', number: '2345', balance: 3456.78 },
+    { id: '7', name: 'High Interest Savings', number: '6789', balance: 15678.90 },
+  ],
+  'Jamaica National Bank': [
+    { id: '8', name: 'JN Chequing Direct', number: '3456', balance: 6200.00 },
+    { id: '9', name: 'JN Goal Saver', number: '7890', balance: 150500.90 },
   ],
 };
 
@@ -25,7 +33,8 @@ const SelectFakeAccountsScreen = () => {
   const navigation = useNavigation();
   const supabase = useSupabaseClient();
   const user = useUser();
-  const { bankName } = params;
+  const { selectedBank } = params;
+  const bankName = selectedBank?.name;
 
   const toggleAccount = (accountId) => {
     setSelectedAccounts(prev => ({
@@ -100,10 +109,10 @@ const SelectFakeAccountsScreen = () => {
               {bankName} {account.name} (****{account.number})
             </Text>
             <Text style={styles.balance}>
-              Balance: {account.balance.toLocaleString('en-US', {
+              Balance: <Text>{account.balance.toLocaleString('en-US', {
                 style: 'currency',
                 currency: 'JMD',
-              })}
+              })}</Text>
             </Text>
           </View>
         </TouchableOpacity>

@@ -6,6 +6,7 @@ import BuyVsRentCalculator from '../Screens/BuyingVsRentingCalculator';
 import CarLoanCalculator from '../Screens/CarLoanCalculator';
 import DebtCalculator from '../Screens/DebtCalculator';
 import GroceryCalculator from '../Screens/GroceryCalculator';
+import TravelCalculator from '../Screens/TravelCalculator';
 
 
 const Calculators = () => {
@@ -16,6 +17,7 @@ const Calculators = () => {
     { title: 'Buying Vs Renting Calculator', route: 'BuyVsRent' },
     { title: 'Grocery Calculator', route: 'Grocery' },
     { title: 'Debt Calculator', route: 'Debt' },
+    { title: 'Travel Calculator', route: 'Travel' },
   ];
   
 

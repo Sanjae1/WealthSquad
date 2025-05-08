@@ -10,7 +10,7 @@ import Home from '../Screens/Home';
 import Calculators from '../Components/Calculators'; // Keep if needed, otherwise CalculatorList acts as entry
 import transactionsScreen from '../Components/transactionScreen';
 import BudgetPlanner from '../Screens/BudgetPlanner';
-import Settings from '../Screens/Settings';
+import Settings from '../Screens/Settings.jsx';
 
 // Calculator Screens
 /*import { Calculators } from '../Components/Calculators'; // Component to list calculators*/
@@ -19,6 +19,7 @@ import BuyVsRentCalculator from '../Screens/BuyingVsRentingCalculator';
 import CarLoanCalculator from '../Screens/CarLoanCalculator';
 import GroceryCalculator from '../Screens/GroceryCalculator'; // Added from App.js
 import DebtCalculator from '../Screens/DebtCalculator'; // Added from App.js
+import TravelCalculator from '../Screens/TravelCalculator'; // Added Travel Calculator
 // Add other calculators if they exist:
 // import StudentLoanCalculator from '../Screens/StudentLoanCalculator';
 // import TravelCalculator from '../Screens/TravelCalculator';
@@ -53,6 +54,7 @@ const CalculatorStackNavigator = () => (
     <CalculatorStack.Screen name="Car Loan" component={CarLoanCalculator} options={{ title: 'Car Loan Calculator' }}/>
     <CalculatorStack.Screen name="Grocery" component={GroceryCalculator} options={{ title: 'Grocery Calculator' }}/>
     <CalculatorStack.Screen name="Debt" component={DebtCalculator} options={{ title: 'Debt Calculator' }}/>
+    <CalculatorStack.Screen name="Travel" component={TravelCalculator} options={{ title: 'Travel Calculator' }}/>
     {/* Add other calculator screens here if needed */}
     {/* <CalculatorStack.Screen name="StudentLoan" component={StudentLoanCalculator} /> */}
     {/* <CalculatorStack.Screen name="Travel" component={TravelCalculator} /> */}
@@ -63,7 +65,7 @@ const CalculatorStackNavigator = () => (
 const MenuStackNavigator = () => (
   <MenuStack.Navigator>
     <MenuStack.Screen
-      name="SettingsList" // Renamed from "Settings" to avoid conflict with Tab name if needed
+      name="Settings" // Renamed from "Settings" to avoid conflict with Tab name if needed
       component={Settings}
       options={{ title: 'More Options' }} // Or keep 'Account & Settings'
     />
