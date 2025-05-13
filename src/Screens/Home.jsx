@@ -189,7 +189,15 @@ const Home = () => {
               {/* List of accounts */}
               {accounts.length > 0 ? (
                 accounts.map((account) => (
-                  <View key={account.id} style={styles.accountItem}>
+                  <TouchableOpacity 
+                    key={account.id} 
+                    style={styles.accountItem}
+                    onPress={() => {
+                      console.log('Account pressed:', account);
+                      navigation.navigate('AccountTransactions', { account });
+                    }}
+                    activeOpacity={0.7}
+                  >
                     <View style={styles.accountInfo}>
                       <Text style={styles.accountName}>{account.account_name || 'Unnamed Account'}</Text>
                       <Text style={styles.accountNumber}>
@@ -204,13 +212,16 @@ const Home = () => {
                         {formatBalance(account.balance)}
                       </Text>
                       <TouchableOpacity 
-                        onPress={() => handleUnlinkAccount(account.id)}
+                        onPress={(e) => {
+                          e.stopPropagation();
+                          handleUnlinkAccount(account.id);
+                        }}
                         style={styles.unlinkButton}
                       >
                         <Icon name="link-off" size={20} color="#E74C3C" />
                       </TouchableOpacity>
                     </View>
-                  </View>
+                  </TouchableOpacity>
                 ))
               ) : (
                 <Text style={styles.noAccountsText}>No accounts added yet</Text>

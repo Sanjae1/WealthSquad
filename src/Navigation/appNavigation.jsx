@@ -7,6 +7,7 @@ import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityI
 // --- Screen Imports ---
 // Tab Screens
 import Home from '../Screens/Home';
+import AccountTransactionsScreen from '../Screens/AccountTransactionsScreen';
 import Calculators from '../Components/Calculators'; // Keep if needed, otherwise CalculatorList acts as entry
 import transactionsScreen from '../Components/transactionScreen';
 import BudgetPlanner from '../Screens/BudgetPlanner';
@@ -35,8 +36,15 @@ const Tab = createBottomTabNavigator();
 const CalculatorStack = createStackNavigator();
 const MenuStack = createStackNavigator();
 const TipsStack = createStackNavigator();
+const HomeStack = createStackNavigator();
 
-// --- Stack Navigators ---
+// Home Stack Navigator
+const HomeStackNavigator = () => (
+  <HomeStack.Navigator screenOptions={{ headerShown: false }}>
+    <HomeStack.Screen name="HomeScreen" component={Home} />
+    <HomeStack.Screen name="AccountTransactions" component={AccountTransactionsScreen} />
+  </HomeStack.Navigator>
+);
 
 // Finance Tips Stack Navigator
 const TipsStackNavigator = () => (
@@ -123,14 +131,13 @@ const AppNavigator = () => (
     }}
   >
     <Tab.Screen
-      name="Home" // Use a distinct name like 'HomeTab' if 'Home' is used elsewhere
-      component={Home}
+      name="Home"
+      component={HomeStackNavigator}
       options={{
         tabBarLabel: 'Home',
         tabBarIcon: ({ color, size }) => (
-          <MaterialCommunityIcons name="home-variant" color={color} size={size} /> // Use filled variant
+          <MaterialCommunityIcons name="home-variant" color={color} size={size} />
         ),
-        // No headerShown: false needed here, inherits from screenOptions
       }}
     />
 
