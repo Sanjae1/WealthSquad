@@ -6,6 +6,16 @@ import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useUser, useSupabaseClient } from '@supabase/auth-helpers-react';
 import RecentTransactions from '../Components/RecentTransaction'; // Corrected path assuming Components folder
 
+const formatBalance = (balance) => {
+  if (balance === undefined || balance === null) return '0.00';
+  const numBalance = parseFloat(balance);
+  if (isNaN(numBalance)) return '0.00';
+  return numBalance.toLocaleString('en-US', {
+    style: 'currency',
+    currency: 'JMD'
+  });
+};
+
 const Home = () => {
   const navigation = useNavigation();
   const user = useUser();
@@ -18,12 +28,20 @@ const Home = () => {
     if (!user) {
       console.log('No user found, skipping fetch');
       setLoading(false);
+      // If no user is found, redirect to login
+      navigation.reset({
+        index: 0,
+        routes: [{ name: 'Login' }],
+      });
       return;
     }
 
     try {
       console.log('Starting to fetch accounts for user:', user.id);
       setLoading(true);
+      
+      // Log the query we're about to execute
+      console.log('Executing Supabase query for accounts');
       
       const { data, error } = await supabase
         .from('accounts')
@@ -35,11 +53,15 @@ const Home = () => {
         throw error;
       }
 
-      console.log('Successfully fetched accounts:', data);
+      console.log('Raw account data received:', JSON.stringify(data, null, 2));
       setAccounts(data || []);
       
       // Calculate total balance
-      const total = data?.reduce((sum, account) => sum + (account.balance || 0), 0) || 0;
+      const total = data?.reduce((sum, account) => {
+        console.log('Processing account balance:', account.balance);
+        return sum + (parseFloat(account.balance) || 0);
+      }, 0) || 0;
+      
       console.log('Calculated total balance:', total);
       setTotalBalance(total);
     } catch (error) {
@@ -49,7 +71,7 @@ const Home = () => {
       console.log('Setting loading to false');
       setLoading(false);
     }
-  }, [user, supabase]);
+  }, [user, supabase, navigation]);
 
   // Use useFocusEffect to refresh data when screen comes into focus
   useFocusEffect(
@@ -89,6 +111,54 @@ const Home = () => {
     }
   };
 
+  const handleUnlinkAccount = async (accountId) => {
+    Alert.alert(
+      'Unlink Account',
+      'Are you sure you want to unlink this account? This will remove all associated transactions.',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel'
+        },
+        {
+          text: 'Unlink',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              // First delete associated transactions
+              const { error: transactionError } = await supabase
+                .from('transactions')
+                .delete()
+                .eq('bank_account_number', accountId);
+
+              if (transactionError) {
+                console.error('Error deleting transactions:', transactionError);
+                throw transactionError;
+              }
+
+              // Then delete the account
+              const { error: accountError } = await supabase
+                .from('accounts')
+                .delete()
+                .eq('id', accountId);
+
+              if (accountError) {
+                console.error('Error deleting account:', accountError);
+                throw accountError;
+              }
+
+              // Refresh the accounts list
+              fetchAccounts();
+            } catch (error) {
+              console.error('Error unlinking account:', error);
+              Alert.alert('Error', 'Failed to unlink account. Please try again.');
+            }
+          }
+        }
+      ]
+    );
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView style={styles.scrollView}>
@@ -112,10 +182,7 @@ const Home = () => {
               <View style={styles.balanceContainer}>
                 <Text style={styles.balanceLabel}>Total Balance</Text>
                 <Text style={styles.balanceAmount}>
-                  {totalBalance.toLocaleString('en-US', {
-                    style: 'currency',
-                    currency: 'JMD'
-                  })}
+                  {formatBalance(totalBalance)}
                 </Text>
               </View>
               
@@ -124,18 +191,25 @@ const Home = () => {
                 accounts.map((account) => (
                   <View key={account.id} style={styles.accountItem}>
                     <View style={styles.accountInfo}>
-                      <Text style={styles.accountName}>{account.name}</Text>
-                      <Text style={styles.accountNumber}>****{account.number}</Text>
+                      <Text style={styles.accountName}>{account.account_name || 'Unnamed Account'}</Text>
+                      <Text style={styles.accountNumber}>
+                        {account.last_four_digits ? `****${account.last_four_digits}` : 'No account number'}
+                      </Text>
                     </View>
-                    <Text style={[
-                      styles.accountBalance,
-                      { color: account.balance >= 0 ? '#4CAF50' : '#E74C3C' }
-                    ]}>
-                      {account.balance.toLocaleString('en-US', {
-                        style: 'currency',
-                        currency: 'JMD'
-                      })}
-                    </Text>
+                    <View style={styles.accountActions}>
+                      <Text style={[
+                        styles.accountBalance,
+                        { color: (account.balance || 0) >= 0 ? '#4CAF50' : '#E74C3C' }
+                      ]}>
+                        {formatBalance(account.balance)}
+                      </Text>
+                      <TouchableOpacity 
+                        onPress={() => handleUnlinkAccount(account.id)}
+                        style={styles.unlinkButton}
+                      >
+                        <Icon name="link-off" size={20} color="#E74C3C" />
+                      </TouchableOpacity>
+                    </View>
                   </View>
                 ))
               ) : (
@@ -279,9 +353,16 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
-  // Removed recentTransactions styles if handled by component
-  // Removed transaction styles if handled by component
-  // REMOVED bottomNav, navItem, navLabel styles
+  accountActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  unlinkButton: {
+    padding: 8,
+    borderRadius: 20,
+    backgroundColor: '#FFEBEE',
+  },
   loadingContainer: {
     padding: 20,
     alignItems: 'center',

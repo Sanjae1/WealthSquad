@@ -4,6 +4,8 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createClient } from '@supabase/supabase-js';
 import { SessionContextProvider } from '@supabase/auth-helpers-react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { BackHandler } from 'react-native';
+import useBackHandler from './src/hooks/useBackHandler';
 
 // Screen Imports
 import Splash from './src/Screens/Splash';
@@ -34,6 +36,14 @@ const supabase = createClient(supabaseUrl, supabaseAnonKey, {
 });
 
 const App = () => {
+  // Handle app exit
+  const handleExit = () => {
+    BackHandler.exitApp();
+  };
+
+  // Use our custom back handler hook
+  useBackHandler(handleExit);
+
   return (
     <SessionContextProvider supabaseClient={supabase}>
       <NavigationContainer>

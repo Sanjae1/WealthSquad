@@ -11,6 +11,8 @@ import Calculators from '../Components/Calculators'; // Keep if needed, otherwis
 import transactionsScreen from '../Components/transactionScreen';
 import BudgetPlanner from '../Screens/BudgetPlanner';
 import Settings from '../Screens/Settings.jsx';
+import FinanceTips from '../Screens/FinanceTips';
+import FinanceTipDetail from '../Screens/FinanceTipDetail';
 
 // Calculator Screens
 /*import { Calculators } from '../Components/Calculators'; // Component to list calculators*/
@@ -20,6 +22,7 @@ import CarLoanCalculator from '../Screens/CarLoanCalculator';
 import GroceryCalculator from '../Screens/GroceryCalculator'; // Added from App.js
 import DebtCalculator from '../Screens/DebtCalculator'; // Added from App.js
 import TravelCalculator from '../Screens/TravelCalculator'; // Added Travel Calculator
+import StudentLoanCalculator from '../Components/StudentLoanCalculator';
 // Add other calculators if they exist:
 // import StudentLoanCalculator from '../Screens/StudentLoanCalculator';
 // import TravelCalculator from '../Screens/TravelCalculator';
@@ -31,8 +34,25 @@ import CreditReportRequestForm from '../Screens/CreditReport'; // Added from App
 const Tab = createBottomTabNavigator();
 const CalculatorStack = createStackNavigator();
 const MenuStack = createStackNavigator();
+const TipsStack = createStackNavigator();
 
 // --- Stack Navigators ---
+
+// Finance Tips Stack Navigator
+const TipsStackNavigator = () => (
+  <TipsStack.Navigator>
+    <TipsStack.Screen
+      name="FinanceTips"
+      component={FinanceTips}
+      options={{ title: 'Finance Tips' }}
+    />
+    <TipsStack.Screen
+      name="FinanceTipDetail"
+      component={FinanceTipDetail}
+      options={({ route }) => ({ title: route.params.tip.title })}
+    />
+  </TipsStack.Navigator>
+);
 
 // Calculator Stack Navigator (Nested within Calculators Tab)
 const CalculatorStackNavigator = () => (
@@ -52,6 +72,7 @@ const CalculatorStackNavigator = () => (
     <CalculatorStack.Screen name="Mortgage" component={MortgageCalculator} options={{ title: 'Mortgage Calculator' }} />
     <CalculatorStack.Screen name="BuyVsRent" component={BuyVsRentCalculator} options={{ title: 'Buy vs. Rent' }}/>
     <CalculatorStack.Screen name="Car Loan" component={CarLoanCalculator} options={{ title: 'Car Loan Calculator' }}/>
+    <CalculatorStack.Screen name="StudentLoan" component={StudentLoanCalculator} options={{ title: 'Student Loan Calculator' }}/>
     <CalculatorStack.Screen name="Grocery" component={GroceryCalculator} options={{ title: 'Grocery Calculator' }}/>
     <CalculatorStack.Screen name="Debt" component={DebtCalculator} options={{ title: 'Debt Calculator' }}/>
     <CalculatorStack.Screen name="Travel" component={TravelCalculator} options={{ title: 'Travel Calculator' }}/>
@@ -110,6 +131,17 @@ const AppNavigator = () => (
           <MaterialCommunityIcons name="home-variant" color={color} size={size} /> // Use filled variant
         ),
         // No headerShown: false needed here, inherits from screenOptions
+      }}
+    />
+
+    <Tab.Screen
+      name="TipsTab"
+      component={TipsStackNavigator}
+      options={{
+        tabBarLabel: 'Tips',
+        tabBarIcon: ({ color, size }) => (
+          <MaterialCommunityIcons name="lightbulb-on" color={color} size={size} />
+        ),
       }}
     />
 

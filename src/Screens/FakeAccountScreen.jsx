@@ -50,17 +50,24 @@ const SelectFakeAccountsScreen = () => {
       merchant: ['Grocery Mart', 'Gas Station', 'Online Retailer', 'Restaurant'][i % 4],
       category: ['Food', 'Transport', 'Shopping', 'Dining'][i % 4],
       date: new Date(Date.now() - Math.random() * 90 * 86400000).toISOString(),
+      user_id: user.id,
+      account_id: accountId, // Make sure this matches your database schema
+      description: `Transaction at ${['Grocery Mart', 'Gas Station', 'Online Retailer', 'Restaurant'][i % 4]}`,
+      status: 'completed'
     }));
 
-    const { error } = await supabase
-      .from('transactions')
-      .insert(transactions.map(tx => ({
-        ...tx,
-        account_id: accountId,
-        user_id: user.id,
-      })));
+    try {
+      const { error } = await supabase
+        .from('transactions')
+        .insert(transactions);
 
-    if (error) console.error('Error seeding transactions:', error);
+      if (error) {
+        console.error('Error seeding transactions:', error);
+        throw error;
+      }
+    } catch (error) {
+      console.error('Error in seedTransactions:', error);
+    }
   };
 
   const handleAddAccounts = async () => {
@@ -68,25 +75,43 @@ const SelectFakeAccountsScreen = () => {
     const accountsToAdd = dummyAccounts[bankName].filter(acc => selectedAccounts[acc.id]);
 
     for (const account of accountsToAdd) {
-      // Insert account
-      const { data, error } = await supabase
-        .from('accounts')
-        .insert({
-          name: `${bankName} ${account.name}`,
-          number: account.number,
-          balance: account.balance,
-          user_id: user.id,
-          bank_name: bankName,
-        })
-        .select()
-        .single();
+      try {
+        // Insert account
+        const { data, error } = await supabase
+          .from('accounts')
+          .insert({
+            account_name: `${bankName} ${account.name}`,
+            institution_name: bankName,
+            balance: account.balance,
+            last_four_digits: account.number,
+            account_type: account.name.toLowerCase().includes('credit') ? 'credit_card' : 
+                         account.name.toLowerCase().includes('savings') ? 'savings' : 'checking',
+            currency: 'JMD',
+            user_id: user.id
+          })
+          .select()
+          .single();
 
-      if (data) await seedTransactions(data.id);
-      if (error) console.error('Error inserting account:', error);
+        if (error) {
+          console.error('Error inserting account:', error);
+          continue;
+        }
+
+        if (data) {
+          // Seed transactions for this account
+          await seedTransactions(data.id);
+        }
+      } catch (error) {
+        console.error('Error in account creation process:', error);
+      }
     }
 
     setLoading(false);
-    navigation.navigate('Home');
+    // Navigate to AppMain instead of Home
+    navigation.reset({
+      index: 0,
+      routes: [{ name: 'AppMain' }],
+    });
   };
 
   return (
