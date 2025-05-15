@@ -11,6 +11,7 @@ import useBackHandler from './src/hooks/useBackHandler';
 import Splash from './src/Screens/Splash';
 import Login from './src/Screens/Login';
 import Signup from './src/Screens/Signup';
+import ForgotPasswordScreen from './src/Screens/ForgotPasswordScreen';
 // Import the main App Navigator
 import AppNavigator from './src/Navigation/appNavigation'; // Corrected path
 
@@ -57,6 +58,7 @@ const App = () => {
           <Stack.Screen name="Splash" component={Splash} />
           <Stack.Screen name="Login" component={Login} />
           <Stack.Screen name="Signup" component={Signup} />
+          <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
 
           {/* Main App Navigator (contains Tabs) */}
           <Stack.Screen name="AppMain" component={AppNavigator} />

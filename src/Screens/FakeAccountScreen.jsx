@@ -57,8 +57,8 @@ const SelectFakeAccountsScreen = () => {
     }));
 
     try {
-      const { error } = await supabase
-        .from('transactions')
+    const { error } = await supabase
+      .from('transactions')
         .insert(transactions);
 
       if (error) {
@@ -76,21 +76,21 @@ const SelectFakeAccountsScreen = () => {
 
     for (const account of accountsToAdd) {
       try {
-        // Insert account
-        const { data, error } = await supabase
-          .from('accounts')
-          .insert({
+      // Insert account
+      const { data, error } = await supabase
+        .from('accounts')
+        .insert({
             account_name: `${bankName} ${account.name}`,
             institution_name: bankName,
-            balance: account.balance,
+          balance: account.balance,
             last_four_digits: account.number,
             account_type: account.name.toLowerCase().includes('credit') ? 'credit_card' : 
                          account.name.toLowerCase().includes('savings') ? 'savings' : 'checking',
             currency: 'JMD',
             user_id: user.id
-          })
-          .select()
-          .single();
+        })
+        .select()
+        .single();
 
         if (error) {
           console.error('Error inserting account:', error);
