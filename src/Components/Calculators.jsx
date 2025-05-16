@@ -6,7 +6,8 @@ import BuyVsRentCalculator from '../Screens/BuyingVsRentingCalculator';
 import CarLoanCalculator from '../Screens/CarLoanCalculator';
 import DebtCalculator from '../Screens/DebtCalculator';
 import GroceryCalculator from '../Screens/GroceryCalculator';
-
+import TravelCalculator from '../Screens/TravelCalculator';
+import StudentLoanCalculator from '../Components/StudentLoanCalculator';
 
 const Calculators = () => {
   const navigation = useNavigation();
@@ -14,8 +15,10 @@ const Calculators = () => {
     { title: 'Car Loan Calculator', route: 'Car Loan' },
     { title: 'Mortgage Calculator', route: 'Mortgage' },
     { title: 'Buying Vs Renting Calculator', route: 'BuyVsRent' },
+    { title: 'Student Loan Calculator', route: 'StudentLoan' },
     { title: 'Grocery Calculator', route: 'Grocery' },
     { title: 'Debt Calculator', route: 'Debt' },
+    { title: 'Travel Calculator', route: 'Travel' },
   ];
   
 

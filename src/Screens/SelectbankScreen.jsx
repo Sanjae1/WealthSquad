@@ -29,7 +29,7 @@ const SelectBankScreen = () => {
              <Icon name="arrow-back" size={24} color="#333" />
          </TouchableOpacity>
         <Text style={styles.headerTitle}>Select Your Bank</Text>
-         <View style={{ width: 24 }} /> {/* Spacer */}
+         <View style={styles.spacer} />
       </View>
       <ScrollView style={styles.listContainer}>
         {banks.map((bank) => (
@@ -68,6 +68,9 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
     textAlign: 'center',
+  },
+  spacer: {
+    width: 24,
   },
   listContainer: {
     flex: 1,

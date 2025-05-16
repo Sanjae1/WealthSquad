@@ -4,13 +4,11 @@ import React, { useState, useRef } from 'react';
 import { MyColours } from '../Utils/MyColours';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
-import { createClient } from '@supabase/supabase-js';
-
-// Initialize Supabase client
-const supabase = createClient('https://whsuumrsdvncjudaxjva.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Indoc3V1bXJzZHZuY2p1ZGF4anZhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MjkwMTMwNjYsImV4cCI6MjA0NDU4OTA2Nn0.Q7fIO9_B6VezWXmFHxR24w_NaZ9z4MZCdnYU8FgC9HI');
+import { useSupabaseClient } from '@supabase/auth-helpers-react';
 
 const Login = () => {
   const nav = useNavigation();
+  const supabase = useSupabaseClient();
   const scrollViewRef = useRef(null);
   const [loginCredentials, setLoginCredentials] = useState({
     email: "",
@@ -40,17 +38,39 @@ const Login = () => {
     setErrorMessage("");
     
     try {
-      const { user, error } = await supabase.auth.signInWithPassword({
-        email: email,
+      console.log('Attempting login with email:', email);
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: email.trim(),
         password: password,
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Login error:', error);
+        throw error;
+      }
 
-      console.log('User logged in:', user);
-      nav.navigate('AppMain');
+      if (!data?.user) {
+        throw new Error('No user data received');
+      }
+
+      console.log('Login successful, user:', data.user.id);
+      
+      // Navigate to AppMain which contains the Home screen
+      nav.reset({
+        index: 0,
+        routes: [{ name: 'AppMain' }],
+      });
     } catch (error) {
-      setErrorMessage(error.message || "Login failed. Please try again.");
+      console.error('Login error:', error);
+      let errorMsg = "Login failed. Please try again.";
+      
+      if (error.message.includes('Invalid login credentials')) {
+        errorMsg = "Invalid email or password";
+      } else if (error.message.includes('Email not confirmed')) {
+        errorMsg = "Please verify your email address first";
+      }
+      
+      setErrorMessage(errorMsg);
     } finally {
       setIsLoading(false);
     }

@@ -30,7 +30,9 @@ const getBankLogo = (bankId) => {
 const FakeLoginScreen = () => {
   const navigation = useNavigation();
   const route = useRoute();
-  const { bankName, bankId } = route.params; // Get bank details passed from previous screen
+  const { selectedBank } = route.params; // Get the selected bank object
+  const bankName = selectedBank?.name;
+  const bankId = selectedBank?.id;
 
   const [username, setUsername] = useState('testuser'); // Pre-fill for demo
   const [password, setPassword] = useState('password'); // Pre-fill for demo
@@ -45,8 +47,8 @@ const FakeLoginScreen = () => {
     setTimeout(() => {
       setIsLoading(false);
       console.log("Login simulation successful.");
-      // Navigate to the account selection screen, passing bank details again
-      navigation.navigate('SelectFakeAccountsScreen', { bankName, bankId });
+      // Navigate to the account selection screen, passing the selected bank object
+      navigation.navigate('SelectFakeAccountsScreen', { selectedBank });
     }, 1500); // 1.5 second delay
   };
 

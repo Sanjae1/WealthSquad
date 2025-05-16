@@ -1,8 +1,11 @@
 // screens/Calculators/TravelCalculator.tsx
 import React, { useState } from 'react';
-import { View, Text, TextInput, StyleSheet, ScrollView, Picker } from 'react-native';
+import { View, Text, TextInput, StyleSheet, ScrollView, Dimensions } from 'react-native';
 import { Button, Card } from 'react-native-paper';
-import { VictoryBar, VictoryChart } from 'victory-native';
+import { BarChart } from 'react-native-chart-kit';
+import { Picker } from '@react-native-picker/picker';
+
+const screenWidth = Dimensions.get('window').width;
 
 const TravelCalculator = () => {
   const [tripType, setTripType] = useState('flight');
@@ -35,18 +38,32 @@ const TravelCalculator = () => {
 
   const results = calculateTrip();
 
+  const chartData = {
+    labels: ['Transport', 'Lodging', 'Food', 'Activities'],
+    datasets: [{
+      data: [
+        parseFloat(transport) || 0,
+        parseFloat(lodging) || 0,
+        parseFloat(food) || 0,
+        parseFloat(activities) || 0
+      ]
+    }]
+  };
+
   return (
     <ScrollView style={styles.container}>
       <Card style={styles.card}>
         <Card.Title title="Travel Calculator" />
         <Card.Content>
-          <Picker
-            selectedValue={tripType}
-            onValueChange={setTripType}
-            style={styles.picker}>
-            <Picker.Item label="Flight" value="flight" />
-            <Picker.Item label="Car" value="car" />
-          </Picker>
+          <View style={styles.pickerContainer}>
+            <Picker
+              selectedValue={tripType}
+              onValueChange={setTripType}
+              style={styles.picker}>
+              <Picker.Item label="Flight" value="flight" />
+              <Picker.Item label="Car" value="car" />
+            </Picker>
+          </View>
 
           <TextInput style={styles.input}
             placeholder="Number of People"
@@ -99,18 +116,96 @@ const TravelCalculator = () => {
             ${Math.abs(results.difference).toFixed(2)}
           </Text>
 
-          <VictoryChart>
-            <VictoryBar
-              data={[
-                { x: 'Transport', y: parseFloat(transport) || 0 },
-                { x: 'Lodging', y: parseFloat(lodging) || 0 },
-                { x: 'Food', y: parseFloat(food) || 0 },
-                { x: 'Activities', y: parseFloat(activities) || 0 }
-              ]}
+          <View style={styles.chartContainer}>
+            <BarChart
+              data={chartData}
+              width={screenWidth - 40}
+              height={220}
+              yAxisLabel="$"
+              yAxisSuffix=""
+              chartConfig={{
+                backgroundColor: '#ffffff',
+                backgroundGradientFrom: '#ffffff',
+                backgroundGradientTo: '#ffffff',
+                decimalPlaces: 0,
+                color: (opacity = 1) => `rgba(76, 175, 80, ${opacity})`,
+                labelColor: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
+                style: {
+                  borderRadius: 16,
+                },
+                barPercentage: 0.5,
+              }}
+              style={styles.chart}
+              verticalLabelRotation={30}
             />
-          </VictoryChart>
+          </View>
         </Card.Content>
       </Card>
     </ScrollView>
   );
 };
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    padding: 16,
+    backgroundColor: '#f5f5f5',
+  },
+  card: {
+    marginBottom: 16,
+    elevation: 4,
+  },
+  pickerContainer: {
+    backgroundColor: '#fff',
+    borderRadius: 8,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    overflow: 'hidden',
+  },
+  picker: {
+    height: 50,
+  },
+  input: {
+    backgroundColor: '#fff',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#ddd',
+  },
+  sectionHeader: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginTop: 16,
+    marginBottom: 12,
+    color: '#333',
+  },
+  resultText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginTop: 16,
+    marginBottom: 8,
+    color: '#333',
+  },
+  underBudget: {
+    fontSize: 16,
+    color: '#4CAF50',
+    marginBottom: 16,
+  },
+  overBudget: {
+    fontSize: 16,
+    color: '#f44336',
+    marginBottom: 16,
+  },
+  chartContainer: {
+    marginTop: 20,
+    alignItems: 'center',
+  },
+  chart: {
+    marginVertical: 8,
+    borderRadius: 16,
+  },
+});
+
+export default TravelCalculator;
