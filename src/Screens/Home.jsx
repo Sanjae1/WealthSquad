@@ -1,3 +1,13 @@
+/**
+ * Home Screen Component
+ * 
+ * The main dashboard screen that users see after logging in. It provides:
+ * - Account summary with total balance
+ * - List of linked bank accounts
+ * - Quick actions for common tasks
+ * - Recent transactions overview
+ */
+
 import React, { useState, useCallback } from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -6,6 +16,11 @@ import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useUser, useSupabaseClient } from '@supabase/auth-helpers-react';
 import RecentTransactions from '../Components/RecentTransaction'; // Corrected path assuming Components folder
 
+/**
+ * Formats a balance value into a currency string
+ * @param {number} balance - The balance to format
+ * @returns {string} Formatted currency string
+ */
 const formatBalance = (balance) => {
   if (balance === undefined || balance === null) return '0.00';
   const numBalance = parseFloat(balance);
@@ -17,18 +32,25 @@ const formatBalance = (balance) => {
 };
 
 const Home = () => {
+  // Navigation and authentication hooks
   const navigation = useNavigation();
   const user = useUser();
   const supabase = useSupabaseClient();
-  const [accounts, setAccounts] = useState([]);
-  const [totalBalance, setTotalBalance] = useState(0);
-  const [loading, setLoading] = useState(true);
 
+  // State management
+  const [accounts, setAccounts] = useState([]);        // List of user's bank accounts
+  const [totalBalance, setTotalBalance] = useState(0); // Total balance across all accounts
+  const [loading, setLoading] = useState(true);        // Loading state for data fetching
+
+  /**
+   * Fetches user's bank accounts from Supabase
+   * Updates accounts list and calculates total balance
+   */
   const fetchAccounts = useCallback(async () => {
     if (!user) {
       console.log('No user found, skipping fetch');
       setLoading(false);
-      // If no user is found, redirect to login
+      // Redirect to login if no user is found
       navigation.reset({
         index: 0,
         routes: [{ name: 'Login' }],
@@ -40,9 +62,7 @@ const Home = () => {
       console.log('Starting to fetch accounts for user:', user.id);
       setLoading(true);
       
-      // Log the query we're about to execute
-      console.log('Executing Supabase query for accounts');
-      
+      // Fetch accounts from Supabase
       const { data, error } = await supabase
         .from('accounts')
         .select('*')
@@ -53,27 +73,23 @@ const Home = () => {
         throw error;
       }
 
-      console.log('Raw account data received:', JSON.stringify(data, null, 2));
       setAccounts(data || []);
       
-      // Calculate total balance
+      // Calculate total balance across all accounts
       const total = data?.reduce((sum, account) => {
-        console.log('Processing account balance:', account.balance);
         return sum + (parseFloat(account.balance) || 0);
       }, 0) || 0;
       
-      console.log('Calculated total balance:', total);
       setTotalBalance(total);
     } catch (error) {
       console.error('Error in fetchAccounts:', error);
       Alert.alert('Error', 'Failed to load accounts. Please try again.');
     } finally {
-      console.log('Setting loading to false');
       setLoading(false);
     }
   }, [user, supabase, navigation]);
 
-  // Use useFocusEffect to refresh data when screen comes into focus
+  // Refresh data when screen comes into focus
   useFocusEffect(
     useCallback(() => {
       console.log('Home screen focused, user:', user?.id);
@@ -81,6 +97,10 @@ const Home = () => {
     }, [fetchAccounts])
   );
 
+  /**
+   * Handles user logout
+   * Signs out from Supabase and redirects to login screen
+   */
   const handleLogout = async () => {
     try {
       Alert.alert(
@@ -97,7 +117,6 @@ const Home = () => {
               const { error } = await supabase.auth.signOut();
               if (error) throw error;
               
-              // Reset navigation to Login screen
               navigation.reset({
                 index: 0,
                 routes: [{ name: 'Login' }],
@@ -111,6 +130,11 @@ const Home = () => {
     }
   };
 
+  /**
+   * Handles unlinking a bank account
+   * Deletes associated transactions and the account itself
+   * @param {string} accountId - ID of the account to unlink
+   */
   const handleUnlinkAccount = async (accountId) => {
     Alert.alert(
       'Unlink Account',
@@ -125,16 +149,13 @@ const Home = () => {
           style: 'destructive',
           onPress: async () => {
             try {
-              // First delete associated transactions
+              // Delete associated transactions first
               const { error: transactionError } = await supabase
                 .from('transactions')
                 .delete()
                 .eq('bank_account_number', accountId);
 
-              if (transactionError) {
-                console.error('Error deleting transactions:', transactionError);
-                throw transactionError;
-              }
+              if (transactionError) throw transactionError;
 
               // Then delete the account
               const { error: accountError } = await supabase
@@ -142,10 +163,7 @@ const Home = () => {
                 .delete()
                 .eq('id', accountId);
 
-              if (accountError) {
-                console.error('Error deleting account:', accountError);
-                throw accountError;
-              }
+              if (accountError) throw accountError;
 
               // Refresh the accounts list
               fetchAccounts();
@@ -162,14 +180,15 @@ const Home = () => {
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView style={styles.scrollView}>
+        {/* Header Section */}
         <View style={styles.header}>
           <Text style={styles.headerTitle}>Welcome, {user?.user_metadata?.full_name || 'User'}!</Text>
-          {/* Optional: Add a logout button here if not in settings */}
-           <TouchableOpacity onPress={handleLogout}>
-             <Icon name="logout" size={24} color="#757575" />
-           </TouchableOpacity>
+          <TouchableOpacity onPress={handleLogout}>
+            <Icon name="logout" size={24} color="#757575" />
+          </TouchableOpacity>
         </View>
 
+        {/* Account Summary Section */}
         <View style={styles.accountSummary}>
           <Text style={styles.sectionTitle}>Account Summary</Text>
           {loading ? (
@@ -179,6 +198,7 @@ const Home = () => {
             </View>
           ) : (
             <>
+              {/* Total Balance Display */}
               <View style={styles.balanceContainer}>
                 <Text style={styles.balanceLabel}>Total Balance</Text>
                 <Text style={styles.balanceAmount}>
@@ -186,16 +206,13 @@ const Home = () => {
                 </Text>
               </View>
               
-              {/* List of accounts */}
+              {/* List of Bank Accounts */}
               {accounts.length > 0 ? (
                 accounts.map((account) => (
                   <TouchableOpacity 
                     key={account.id} 
                     style={styles.accountItem}
-                    onPress={() => {
-                      console.log('Account pressed:', account);
-                      navigation.navigate('AccountTransactions', { account });
-                    }}
+                    onPress={() => navigation.navigate('AccountTransactions', { account })}
                     activeOpacity={0.7}
                   >
                     <View style={styles.accountInfo}>
@@ -230,14 +247,13 @@ const Home = () => {
           )}
         </View>
 
+        {/* Quick Actions Section */}
         <View style={styles.quickActions}>
           <Text style={styles.sectionTitle}>Quick Actions</Text>
           <View style={styles.actionButtonsContainer}>
-            {/* Navigate to the screen defined in App.js Stack */}
             <TouchableOpacity onPress={() => navigation.navigate('SelectBankScreen')}>
               <ActionButton icon="add" label="Add Account" />
             </TouchableOpacity>
-            {/* Navigate to the Budget *Tab* */}
             <TouchableOpacity onPress={() => navigation.navigate('BudgetTab')}>
               <ActionButton icon="attach-money" label="Budget" />
             </TouchableOpacity>
@@ -245,18 +261,17 @@ const Home = () => {
           </View>
         </View>
 
-        {/* Ensure RecentTransactions component exists and works */}
+        {/* Recent Transactions Section */}
         <RecentTransactions />
-
       </ScrollView>
-
-      {/* REMOVED the commented-out manual bottom navigation */}
-
     </SafeAreaView>
   );
 };
 
-// ActionButton component remains the same
+/**
+ * Quick Action Button Component
+ * Renders a circular button with an icon and label
+ */
 const ActionButton = ({ icon, label }) => (
   <View style={styles.actionButton}>
     <Icon name={icon} size={24} color="#4CAF50" />
@@ -390,6 +405,5 @@ const styles = StyleSheet.create({
     marginTop: 20,
   },
 });
-
 
 export default Home;

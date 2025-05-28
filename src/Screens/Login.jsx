@@ -1,3 +1,14 @@
+/**
+ * Login Screen Component
+ * 
+ * Handles user authentication with the following features:
+ * - Email and password validation
+ * - Secure password input with visibility toggle
+ * - Error handling and display
+ * - Keyboard-aware scrolling
+ * - Navigation to forgot password and signup
+ */
+
 import { View, Text, ScrollView, TouchableOpacity, TextInput, Image, KeyboardAvoidingView, Platform, ActivityIndicator, Keyboard } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import React, { useState, useRef } from 'react';
@@ -7,18 +18,27 @@ import { useNavigation } from '@react-navigation/native';
 import { useSupabaseClient } from '@supabase/auth-helpers-react';
 
 const Login = () => {
+  // Navigation and Supabase client hooks
   const nav = useNavigation();
   const supabase = useSupabaseClient();
+  
+  // Refs for scroll view control
   const scrollViewRef = useRef(null);
+
+  // State management
   const [loginCredentials, setLoginCredentials] = useState({
     email: "",
     password: ""
   });
-  const [isVisible, setIsVisible] = useState(true);
-  const [isLoading, setIsLoading] = useState(false);
-  const [errorMessage, setErrorMessage] = useState("");
+  const [isVisible, setIsVisible] = useState(true);      // Password visibility toggle
+  const [isLoading, setIsLoading] = useState(false);     // Loading state during login
+  const [errorMessage, setErrorMessage] = useState("");  // Error message display
   const { email, password } = loginCredentials;
 
+  /**
+   * Validates the login form inputs
+   * @returns {boolean} True if form is valid, false otherwise
+   */
   const validateForm = () => {
     if (!email.trim() || !password.trim()) {
       setErrorMessage("Please fill in all fields");
@@ -31,6 +51,10 @@ const Login = () => {
     return true;
   };
 
+  /**
+   * Handles the login process
+   * Authenticates user with Supabase and navigates to main app on success
+   */
   const loginUser = async () => {
     if (!validateForm()) return;
     
@@ -38,32 +62,26 @@ const Login = () => {
     setErrorMessage("");
     
     try {
-      console.log('Attempting login with email:', email);
       const { data, error } = await supabase.auth.signInWithPassword({
         email: email.trim(),
         password: password,
       });
 
-      if (error) {
-        console.error('Login error:', error);
-        throw error;
-      }
+      if (error) throw error;
 
       if (!data?.user) {
         throw new Error('No user data received');
       }
-
-      console.log('Login successful, user:', data.user.id);
       
-      // Navigate to AppMain which contains the Home screen
+      // Navigate to main app screen
       nav.reset({
         index: 0,
         routes: [{ name: 'AppMain' }],
       });
     } catch (error) {
-      console.error('Login error:', error);
       let errorMsg = "Login failed. Please try again.";
       
+      // Handle specific error cases
       if (error.message.includes('Invalid login credentials')) {
         errorMsg = "Invalid email or password";
       } else if (error.message.includes('Email not confirmed')) {
@@ -76,9 +94,11 @@ const Login = () => {
     }
   };
 
-  // Function to handle input focus and scroll to the focused input
+  /**
+   * Handles input focus and scrolls to the focused input
+   * @param {number} y - The y-coordinate to scroll to
+   */
   const handleFocus = (y) => {
-    // Add a small delay to ensure the keyboard is fully shown
     setTimeout(() => {
       scrollViewRef.current?.scrollTo({ y: y, animated: true });
     }, 100);
@@ -86,6 +106,7 @@ const Login = () => {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: MyColours.secondary }}>
+      {/* Keyboard-aware container */}
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -101,6 +122,7 @@ const Login = () => {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
+          {/* Logo Section */}
           <View style={{ 
             alignItems: 'center', 
             paddingVertical: Platform.OS === 'ios' ? 40 : 20 
@@ -115,7 +137,9 @@ const Login = () => {
             />
           </View>
 
+          {/* Login Form Section */}
           <View style={{ paddingHorizontal: 24 }}>
+            {/* Welcome Text */}
             <Text style={{ 
               color: MyColours.primary, 
               fontSize: 28, 
@@ -132,6 +156,7 @@ const Login = () => {
               Sign in to continue your journey
             </Text>
 
+            {/* Error Message Display */}
             {errorMessage ? (
               <View style={{ 
                 backgroundColor: '#FFECEC', 
@@ -152,6 +177,7 @@ const Login = () => {
               </View>
             ) : null}
 
+            {/* Email Input */}
             <View style={{ marginBottom: 24 }}>
               <Text style={{ 
                 fontSize: 14, 
@@ -179,6 +205,7 @@ const Login = () => {
               />
             </View>
 
+            {/* Password Input */}
             <View style={{ marginBottom: 24 }}>
               <Text style={{ 
                 fontSize: 14, 
@@ -209,6 +236,7 @@ const Login = () => {
                   }}
                   onFocus={() => handleFocus(250)}
                 />
+                {/* Password Visibility Toggle */}
                 <TouchableOpacity
                   onPress={() => setIsVisible(!isVisible)}
                   hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
@@ -222,6 +250,7 @@ const Login = () => {
               </View>
             </View>
 
+            {/* Forgot Password Link */}
             <TouchableOpacity 
               onPress={() => nav.navigate('ForgotPassword')}
               style={{ alignSelf: 'flex-end', marginBottom: 32 }}
@@ -235,6 +264,7 @@ const Login = () => {
               </Text>
             </TouchableOpacity>
 
+            {/* Login Button */}
             <TouchableOpacity 
               onPress={() => {
                 Keyboard.dismiss();
@@ -251,10 +281,10 @@ const Login = () => {
               }}
             >
               {isLoading ? (
-                <ActivityIndicator color={MyColours.secondary} />
+                <ActivityIndicator color="#fff" />
               ) : (
                 <Text style={{ 
-                  color: MyColours.secondary, 
+                  color: '#fff', 
                   fontSize: 16,
                   fontWeight: '600' 
                 }}>
@@ -263,28 +293,25 @@ const Login = () => {
               )}
             </TouchableOpacity>
 
+            {/* Sign Up Link */}
             <View style={{ 
               flexDirection: 'row', 
               justifyContent: 'center', 
-              alignItems: 'center', 
-              marginTop: 32 
+              marginTop: 24 
             }}>
               <Text style={{ 
                 color: MyColours.textSecondary,
                 fontSize: 14 
               }}>
-                Don't have an account?
+                Don't have an account?{' '}
               </Text>
-              <TouchableOpacity 
-                onPress={() => nav.navigate('Signup')}
-                style={{ marginLeft: 4 }}
-              >
+              <TouchableOpacity onPress={() => nav.navigate('Signup')}>
                 <Text style={{ 
-                  color: MyColours.primary, 
+                  color: MyColours.primary,
                   fontSize: 14,
                   fontWeight: '600' 
                 }}>
-                  Create Account
+                  Sign Up
                 </Text>
               </TouchableOpacity>
             </View>

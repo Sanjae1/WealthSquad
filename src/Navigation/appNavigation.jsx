@@ -1,44 +1,51 @@
-// navigation/AppNavigation.jsx
+/**
+ * Main Navigation Configuration
+ * This file sets up the complete navigation structure for the app, including:
+ * - Bottom Tab Navigation
+ * - Stack Navigators for each tab
+ * - Screen configurations and styling
+ */
+
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createStackNavigator } from '@react-navigation/stack';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 
 // --- Screen Imports ---
-// Tab Screens
+// Main Tab Screens
 import Home from '../Screens/Home';
 import AccountTransactionsScreen from '../Screens/AccountTransactionsScreen';
-import Calculators from '../Components/Calculators'; // Keep if needed, otherwise CalculatorList acts as entry
+import Calculators from '../Components/Calculators';
 import transactionsScreen from '../Components/transactionScreen';
 import BudgetPlanner from '../Screens/BudgetPlanner';
 import Settings from '../Screens/Settings.jsx';
 import FinanceTips from '../Screens/FinanceTips';
 import FinanceTipDetail from '../Screens/FinanceTipDetail';
 
-// Calculator Screens
-/*import { Calculators } from '../Components/Calculators'; // Component to list calculators*/
+// Financial Calculator Screens
 import MortgageCalculator from '../Screens/MortgageCalculator';
 import BuyVsRentCalculator from '../Screens/BuyingVsRentingCalculator';
 import CarLoanCalculator from '../Screens/CarLoanCalculator';
-import GroceryCalculator from '../Screens/GroceryCalculator'; // Added from App.js
-import DebtCalculator from '../Screens/DebtCalculator'; // Added from App.js
-import TravelCalculator from '../Screens/TravelCalculator'; // Added Travel Calculator
+import GroceryCalculator from '../Screens/GroceryCalculator';
+import DebtCalculator from '../Screens/DebtCalculator';
+import TravelCalculator from '../Screens/TravelCalculator';
 import StudentLoanCalculator from '../Components/StudentLoanCalculator';
-// Add other calculators if they exist:
-// import StudentLoanCalculator from '../Screens/StudentLoanCalculator';
-// import TravelCalculator from '../Screens/TravelCalculator';
 
-// Menu/Settings Stack Screens
-import CreditReportRequestForm from '../Screens/CreditReport'; // Added from App.js
+// Additional Settings/Menu Screens
+import CreditReportRequestForm from '../Screens/CreditReport';
 
 // --- Navigator Definitions ---
+// Create navigators for different sections of the app
 const Tab = createBottomTabNavigator();
 const CalculatorStack = createStackNavigator();
 const MenuStack = createStackNavigator();
 const TipsStack = createStackNavigator();
 const HomeStack = createStackNavigator();
 
-// Home Stack Navigator
+/**
+ * Home Stack Navigator
+ * Handles navigation between the main home screen and account transaction details
+ */
 const HomeStackNavigator = () => (
   <HomeStack.Navigator screenOptions={{ headerShown: false }}>
     <HomeStack.Screen name="HomeScreen" component={Home} />
@@ -46,7 +53,10 @@ const HomeStackNavigator = () => (
   </HomeStack.Navigator>
 );
 
-// Finance Tips Stack Navigator
+/**
+ * Finance Tips Stack Navigator
+ * Manages navigation between the tips list and individual tip details
+ */
 const TipsStackNavigator = () => (
   <TipsStack.Navigator>
     <TipsStack.Screen
@@ -62,21 +72,18 @@ const TipsStackNavigator = () => (
   </TipsStack.Navigator>
 );
 
-// Calculator Stack Navigator (Nested within Calculators Tab)
+/**
+ * Calculator Stack Navigator
+ * Provides navigation between the calculator list and individual calculator screens
+ */
 const CalculatorStackNavigator = () => (
-  <CalculatorStack.Navigator
-    screenOptions={{
-      // Optional: Add default screen options for this stack
-      // headerStyle: { backgroundColor: '#f4511e' },
-      // headerTintColor: '#fff',
-    }}
-  >
+  <CalculatorStack.Navigator>
     <CalculatorStack.Screen
       name="Calculators"
-      component={Calculators} // Use CalculatorsScreen as the list entry point
+      component={Calculators}
       options={{ title: 'Financial Calculators' }}
     />
-    {/* Link specific calculators from the list screen */}
+    {/* Individual Calculator Screens */}
     <CalculatorStack.Screen name="Mortgage" component={MortgageCalculator} options={{ title: 'Mortgage Calculator' }} />
     <CalculatorStack.Screen name="BuyVsRent" component={BuyVsRentCalculator} options={{ title: 'Buy vs. Rent' }}/>
     <CalculatorStack.Screen name="Car Loan" component={CarLoanCalculator} options={{ title: 'Car Loan Calculator' }}/>
@@ -84,52 +91,54 @@ const CalculatorStackNavigator = () => (
     <CalculatorStack.Screen name="Grocery" component={GroceryCalculator} options={{ title: 'Grocery Calculator' }}/>
     <CalculatorStack.Screen name="Debt" component={DebtCalculator} options={{ title: 'Debt Calculator' }}/>
     <CalculatorStack.Screen name="Travel" component={TravelCalculator} options={{ title: 'Travel Calculator' }}/>
-    {/* Add other calculator screens here if needed */}
-    {/* <CalculatorStack.Screen name="StudentLoan" component={StudentLoanCalculator} /> */}
-    {/* <CalculatorStack.Screen name="Travel" component={TravelCalculator} /> */}
   </CalculatorStack.Navigator>
 );
 
-// Menu Stack Navigator (Nested within Menu Tab)
+/**
+ * Menu Stack Navigator
+ * Handles navigation for settings and additional features
+ */
 const MenuStackNavigator = () => (
   <MenuStack.Navigator>
     <MenuStack.Screen
-      name="Settings" // Renamed from "Settings" to avoid conflict with Tab name if needed
+      name="Settings"
       component={Settings}
-      options={{ title: 'More Options' }} // Or keep 'Account & Settings'
+      options={{ title: 'More Options' }}
     />
     <MenuStack.Screen
       name="CreditReport"
       component={CreditReportRequestForm}
       options={{ title: 'Credit Report Request' }}
     />
-    {/* Add other screens accessible from the Menu/Settings section here */}
   </MenuStack.Navigator>
 );
 
-
-// --- Main Bottom Tab Navigator ---
+/**
+ * Main Bottom Tab Navigator
+ * Configures the primary navigation structure with tabs for different app sections
+ */
 const AppNavigator = () => (
   <Tab.Navigator
-    initialRouteName="Home" // Optional: set the default tab
+    initialRouteName="Home"
     screenOptions={{
-      tabBarActiveTintColor: '#3B82F6', // Blue-500
-      tabBarInactiveTintColor: '#64748B', // Slate-500
+      // Tab bar styling
+      tabBarActiveTintColor: '#3B82F6',    // Active tab color (Blue-500)
+      tabBarInactiveTintColor: '#64748B',  // Inactive tab color (Slate-500)
       tabBarStyle: {
         paddingBottom: 5,
-        paddingTop: 5, // Add padding top for balance
+        paddingTop: 5,
         height: 60,
-        backgroundColor: '#FFFFFF', // Ensure background is set
-        borderTopColor: '#E5E7EB', // Add a subtle top border
+        backgroundColor: '#FFFFFF',
+        borderTopColor: '#E5E7EB',
         borderTopWidth: 1,
       },
       tabBarLabelStyle: {
         fontSize: 12,
-        // fontWeight: '500', // Medium weight for labels
       },
-      headerShown: false, // Hide headers for Tab screens by default (Stacks handle their own)
+      headerShown: false, // Hide headers for Tab screens (Stacks handle their own)
     }}
   >
+    {/* Home Tab */}
     <Tab.Screen
       name="Home"
       component={HomeStackNavigator}
@@ -141,6 +150,7 @@ const AppNavigator = () => (
       }}
     />
 
+    {/* Finance Tips Tab */}
     <Tab.Screen
       name="TipsTab"
       component={TipsStackNavigator}
@@ -152,53 +162,55 @@ const AppNavigator = () => (
       }}
     />
 
+    {/* Calculators Tab */}
     <Tab.Screen
-      name="CalculatorsTab" // Distinct name
-      component={CalculatorStackNavigator} // Use the Stack Navigator
+      name="CalculatorsTab"
+      component={CalculatorStackNavigator}
       options={{
         tabBarLabel: 'Calculators',
         tabBarIcon: ({ color, size }) => (
           <MaterialCommunityIcons name="calculator-variant" color={color} size={size} />
         ),
-        // Header is handled by the CalculatorStackNavigator itself
       }}
     />
 
+    {/* Transactions Tab */}
     <Tab.Screen
-      name="TransactionsTab" // Distinct name
+      name="TransactionsTab"
       component={transactionsScreen}
       options={{
         tabBarLabel: 'Transactions',
         tabBarIcon: ({ color, size }) => (
           <MaterialCommunityIcons name="swap-horizontal" color={color} size={size} />
         ),
-         headerShown: true, // Show header specifically for Transactions if needed
-         title: 'All Transactions' // Set header title for this tab
+        headerShown: true,
+        title: 'All Transactions'
       }}
     />
 
-     <Tab.Screen
-        name="BudgetTab" // Distinct name
-        component={BudgetPlanner}
-        options={{
-          tabBarLabel: 'Budget',
-          tabBarIcon: ({ color, size }) => (
-            <MaterialCommunityIcons name="chart-pie" color={color} size={size} /> // Pie chart icon
-          ),
-           headerShown: true, // Show header specifically for Budget Planner if needed
-           title: 'Budget Planner' // Set header title for this tab
-        }}
-      />
-
+    {/* Budget Planner Tab */}
     <Tab.Screen
-      name="MenuTab" // Distinct name
-      component={MenuStackNavigator} // Use the Stack Navigator
+      name="BudgetTab"
+      component={BudgetPlanner}
+      options={{
+        tabBarLabel: 'Budget',
+        tabBarIcon: ({ color, size }) => (
+          <MaterialCommunityIcons name="chart-pie" color={color} size={size} />
+        ),
+        headerShown: true,
+        title: 'Budget Planner'
+      }}
+    />
+
+    {/* More Options Tab */}
+    <Tab.Screen
+      name="MenuTab"
+      component={MenuStackNavigator}
       options={{
         tabBarLabel: 'More',
         tabBarIcon: ({ color, size }) => (
           <MaterialCommunityIcons name="menu" color={color} size={size} />
         ),
-         // Header is handled by the MenuStackNavigator itself
       }}
     />
   </Tab.Navigator>
