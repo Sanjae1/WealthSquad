@@ -26,7 +26,7 @@ import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityI
 // import DebtCalculator from '../Screens/DebtCalculator';
 // import GroceryCalculator from '../Screens/GroceryCalculator';
 // import TravelCalculator from '../Screens/TravelCalculator';
-// import StudentLoanCalculator from '../Components/StudentLoanCalculator'; // Note: This was ../Components, others ../Screens
+import StudentLoanCalculator from '../Components/StudentLoanCalculator'; // Note: This was ../Components, others ../Screens
 
 const { width } = Dimensions.get('window');
 const cardMargin = 8;
