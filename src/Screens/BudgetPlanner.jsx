@@ -1,5 +1,5 @@
 // src/screens/BudgetPlanner.js
-import React, { useState, useMemo, useCallback, useRef } from 'react';
+import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react'; // Added useEffect
 import {
   View,
   Text,
@@ -13,11 +13,12 @@ import {
 } from 'react-native';
 import { PieChart } from 'react-native-chart-kit';
 import Icon from 'react-native-vector-icons/MaterialIcons';
+import AsyncStorage from '@react-native-async-storage/async-storage'; // Import AsyncStorage
 
 // --- Constants ---
 const AppColors = {
   primary: '#4CAF50',
-  secondary: '#36A2EB', // For savings goal progress
+  secondary: '#36A2EB',
   danger: '#ff4444',
   text: '#333333',
   textSecondary: '#757575',
@@ -37,7 +38,6 @@ const baseChartConfig = {
   color: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
 };
 
-// --- UI & Message Constants ---
 const SCREEN_HORIZONTAL_PADDING = 16;
 const SECTION_HORIZONTAL_PADDING = 16;
 const ALERT_MESSAGES = {
@@ -51,10 +51,21 @@ const ALERT_MESSAGES = {
   invalidGoalAmountMessage: 'Please enter a valid positive amount for your goal.',
   goalSetTitle: 'Goal Set!',
   goalUpdatedTitle: 'Goal Updated!',
+  clearGoalTitle: 'Clear Goal',
+  clearGoalMessage: 'Are you sure you want to clear your current savings goal? This action cannot be undone.',
 };
 
-// --- Reusable Sub-Components ---
+// --- AsyncStorage Keys ---
+const STORAGE_KEYS = {
+  BUDGET_INPUT: '@BudgetPlanner:budgetInput',
+  EXPENSES: '@BudgetPlanner:expenses',
+  SAVINGS_GOAL_NAME: '@BudgetPlanner:savingsGoalName',
+  SAVINGS_GOAL_AMOUNT: '@BudgetPlanner:savingsGoalAmount',
+  CURRENT_SAVED_AMOUNT: '@BudgetPlanner:currentSavedAmount',
+};
 
+
+// --- Reusable Sub-Components (ProgressBar, SectionCard, SummaryDetailRow, ExpenseListItem remain the same) ---
 const SectionCard = ({ title, children, style }) => (
   <View style={[styles.section, style]}>
     {title && <Text style={styles.sectionTitle}>{title}</Text>}
@@ -85,10 +96,8 @@ const ExpenseListItem = ({ expense, onDelete }) => (
   </View>
 );
 
-// Simple ProgressBar Component
 const ProgressBar = ({ progress, height = 10, barColor = AppColors.secondary, trackColor = AppColors.border }) => {
   const clampedProgress = Math.max(0, Math.min(1, progress));
-
   return (
     <View style={[styles.progressBarTrack, { height, backgroundColor: trackColor }]}>
       <View style={[styles.progressBarFill, { width: `${clampedProgress * 100}%`, backgroundColor: barColor, height }]} />
@@ -112,14 +121,85 @@ const BudgetPlanner = () => {
   const [goalAmountInput, setGoalAmountInput] = useState('');
   const [contributionInput, setContributionInput] = useState('');
 
+  const [isLoading, setIsLoading] = useState(true); // To show loading indicator if needed
 
   // --- Refs ---
   const amountInputRef = useRef(null);
   const goalAmountInputRef = useRef(null);
   const contributionAmountInputRef = useRef(null);
 
+  // --- Data Loading Effect ---
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        setIsLoading(true);
+        const storedBudgetInput = await AsyncStorage.getItem(STORAGE_KEYS.BUDGET_INPUT);
+        const storedExpenses = await AsyncStorage.getItem(STORAGE_KEYS.EXPENSES);
+        const storedSavingsGoalName = await AsyncStorage.getItem(STORAGE_KEYS.SAVINGS_GOAL_NAME);
+        const storedSavingsGoalAmount = await AsyncStorage.getItem(STORAGE_KEYS.SAVINGS_GOAL_AMOUNT);
+        const storedCurrentSavedAmount = await AsyncStorage.getItem(STORAGE_KEYS.CURRENT_SAVED_AMOUNT);
 
-  // --- Memoized Derived Values for Budget ---
+        if (storedBudgetInput !== null) setBudgetInput(storedBudgetInput);
+        if (storedExpenses !== null) setExpenses(JSON.parse(storedExpenses));
+        if (storedSavingsGoalName !== null) {
+            setSavingsGoalName(storedSavingsGoalName);
+            setGoalNameInput(storedSavingsGoalName); // Pre-fill input
+        }
+        if (storedSavingsGoalAmount !== null) {
+            const parsedAmount = parseFloat(storedSavingsGoalAmount);
+            setSavingsGoalAmount(parsedAmount);
+            setGoalAmountInput(parsedAmount.toString()); // Pre-fill input
+        }
+        if (storedCurrentSavedAmount !== null) setCurrentSavedAmount(parseFloat(storedCurrentSavedAmount));
+
+      } catch (error) {
+        console.error('Failed to load data from storage', error);
+        Alert.alert('Error', 'Could not load saved data.');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    loadData();
+  }, []);
+
+  // --- Data Saving Effects ---
+  useEffect(() => {
+    const saveData = async () => {
+      try {
+        if (!isLoading) { // Only save after initial load is complete
+          await AsyncStorage.setItem(STORAGE_KEYS.BUDGET_INPUT, budgetInput);
+        }
+      } catch (error) { console.error('Failed to save budget input', error); }
+    };
+    saveData();
+  }, [budgetInput, isLoading]);
+
+  useEffect(() => {
+    const saveData = async () => {
+      try {
+        if (!isLoading) {
+          await AsyncStorage.setItem(STORAGE_KEYS.EXPENSES, JSON.stringify(expenses));
+        }
+      } catch (error) { console.error('Failed to save expenses', error); }
+    };
+    saveData();
+  }, [expenses, isLoading]);
+
+  useEffect(() => {
+    const saveData = async () => {
+      try {
+        if (!isLoading) {
+          await AsyncStorage.setItem(STORAGE_KEYS.SAVINGS_GOAL_NAME, savingsGoalName);
+          await AsyncStorage.setItem(STORAGE_KEYS.SAVINGS_GOAL_AMOUNT, savingsGoalAmount.toString());
+          await AsyncStorage.setItem(STORAGE_KEYS.CURRENT_SAVED_AMOUNT, currentSavedAmount.toString());
+        }
+      } catch (error) { console.error('Failed to save savings goal data', error); }
+    };
+    saveData();
+  }, [savingsGoalName, savingsGoalAmount, currentSavedAmount, isLoading]);
+
+
+  // --- Memoized Derived Values for Budget (remain the same) ---
   const numericBudget = useMemo(() => {
     const parsed = parseFloat(budgetInput);
     return isNaN(parsed) || parsed < 0 ? 0 : parsed;
@@ -131,10 +211,15 @@ const BudgetPlanner = () => {
 
   const remainingBalance = useMemo(() => {
     if (numericBudget > 0) {
-      return numericBudget - totalExpenses;
+      const balance = numericBudget - totalExpenses;
+      // If we want to consider contributions to savings as an "expense" from the budget
+      // This part is for "More sophisticated handling of contributions"
+      // const contributionAmount = parseFloat(contributionInput); // This would need more robust state for contributions
+      // return balance - (isNaN(contributionAmount) ? 0 : contributionAmount);
+      return balance;
     }
     return -totalExpenses;
-  }, [numericBudget, totalExpenses]);
+  }, [numericBudget, totalExpenses]); // Add contributionInput or similar if linking
 
   const percentageUsed = useMemo(() => {
     if (numericBudget <= 0 || totalExpenses <= 0) return 0;
@@ -152,7 +237,7 @@ const BudgetPlanner = () => {
     }));
   }, [expenses]);
 
-  // --- Memoized Derived Values for Savings Goal ---
+  // --- Memoized Derived Values for Savings Goal (remain the same) ---
   const savingsProgress = useMemo(() => {
     if (savingsGoalAmount <= 0) return 0;
     return currentSavedAmount / savingsGoalAmount;
@@ -163,7 +248,7 @@ const BudgetPlanner = () => {
   }, [savingsGoalAmount, currentSavedAmount]);
 
 
-  // --- Callbacks for Budget & Expenses ---
+  // --- Callbacks for Budget & Expenses (remain the same) ---
   const handleBudgetInputChange = useCallback((text) => {
     if (text === '' || /^\d*\.?\d*$/.test(text)) {
       setBudgetInput(text);
@@ -223,27 +308,26 @@ const BudgetPlanner = () => {
       return;
     }
 
-    const isNewGoalSetup = !savingsGoalName; // True if setting for the first time
+    const isNewGoalSetup = !savingsGoalName;
 
     setSavingsGoalName(newName);
     setSavingsGoalAmount(newAmount);
 
-    if (savingsGoalName !== newName) { // If name changed, it's effectively a new goal
+    if (savingsGoalName !== newName || isNewGoalSetup) { // If name changed or new goal, reset saved amount
       setCurrentSavedAmount(0);
-    } else { // Name is same, amount might have changed
+    } else {
       if (currentSavedAmount > newAmount) {
-        setCurrentSavedAmount(newAmount); // Cap progress if new goal target is smaller
+        setCurrentSavedAmount(newAmount);
       }
     }
-    // Keep input fields populated for easy editing
-    setGoalNameInput(newName);
-    setGoalAmountInput(newAmount.toString());
+    // Inputs are pre-filled by useEffect watching savingsGoalName/Amount
+    // No need to setGoalNameInput/setGoalAmountInput here anymore if we load them from state
 
     Alert.alert(
         isNewGoalSetup ? ALERT_MESSAGES.goalSetTitle : ALERT_MESSAGES.goalUpdatedTitle,
         `Your savings goal "${newName}" for $${newAmount.toFixed(2)} has been ${isNewGoalSetup ? 'set' : 'updated'}.`
     );
-  }, [goalNameInput, goalAmountInput, savingsGoalName, currentSavedAmount]); // currentSavedAmount is needed to adjust it
+  }, [goalNameInput, goalAmountInput, savingsGoalName, currentSavedAmount]);
 
   const handleContributionAmountChange = useCallback((text) => {
       if (text === '' || /^\d*\.?\d*$/.test(text)) {
@@ -265,24 +349,69 @@ const BudgetPlanner = () => {
     }
     if (currentSavedAmount >= savingsGoalAmount) {
         Alert.alert("Goal Reached", "Congratulations! You've already reached your savings goal.");
+        setContributionInput(''); // Clear input even if goal reached
         return;
     }
 
+    // --- More sophisticated handling of contributions (Linking to budget) ---
+    // This is a conceptual addition. Needs careful thought on UX.
+    // Option 1: Deduct from remaining budget IF available
+    // if (remainingBalance >= amount) {
+    //   // This would require remainingBalance to be updated based on contributions
+    //   // And a way to track "savings contributions" as a special type of expense
+    //   // Or simply, the user understands their "remaining balance" is what's left *after* they decide to save
+    // } else {
+    //   Alert.alert("Insufficient Budget", "Your remaining budget is not enough for this contribution.");
+    //   return;
+    // }
+
     const newTotalSaved = currentSavedAmount + amount;
-    setCurrentSavedAmount(Math.min(newTotalSaved, savingsGoalAmount)); // Don't save more than the goal
-    setContributionInput(''); // Clear input
+    setCurrentSavedAmount(Math.min(newTotalSaved, savingsGoalAmount));
+    setContributionInput('');
 
     if (newTotalSaved >= savingsGoalAmount) {
         Alert.alert("Goal Reached!", `Congratulations! You've reached your goal: "${savingsGoalName}".`);
     } else {
         Alert.alert("Contribution Added", `$${amount.toFixed(2)} added to your goal: "${savingsGoalName}".`);
     }
-  }, [contributionInput, currentSavedAmount, savingsGoalAmount, savingsGoalName]);
+  }, [contributionInput, currentSavedAmount, savingsGoalAmount, savingsGoalName, remainingBalance]); // Added remainingBalance
+
+  const handleClearGoal = useCallback(() => {
+    Alert.alert(
+      ALERT_MESSAGES.clearGoalTitle,
+      ALERT_MESSAGES.clearGoalMessage,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Clear Goal",
+          style: "destructive",
+          onPress: () => {
+            setSavingsGoalName('');
+            setSavingsGoalAmount(0);
+            setCurrentSavedAmount(0);
+            setGoalNameInput('');
+            setGoalAmountInput('');
+            setContributionInput('');
+            Alert.alert('Goal Cleared', 'Your savings goal has been removed.');
+          }
+        }
+      ]
+    );
+  }, []);
 
 
-  // --- Dynamic Sizing ---
+  // --- Dynamic Sizing (remains the same) ---
   const screenWidth = Dimensions.get('window').width;
   const pieChartWidth = screenWidth - (SCREEN_HORIZONTAL_PADDING * 2) - (SECTION_HORIZONTAL_PADDING * 2);
+
+  if (isLoading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <Text>Loading your budget...</Text>
+        {/* You could add an ActivityIndicator here */}
+      </View>
+    );
+  }
 
   return (
     <ScrollView
@@ -349,7 +478,7 @@ const BudgetPlanner = () => {
       </SectionCard>
 
       {/* Savings Goal Setup Section */}
-      <SectionCard title={savingsGoalName ? `Edit: ${savingsGoalName}` : "Set a Savings Goal"}>
+      <SectionCard title={savingsGoalName ? `Edit Goal: ${savingsGoalName}` : "Set a Savings Goal"}>
         <TextInput
           style={styles.input}
           placeholder="Goal Name (e.g., New Laptop)"
@@ -374,11 +503,16 @@ const BudgetPlanner = () => {
         <TouchableOpacity style={styles.primaryButton} onPress={handleSetOrUpdateGoal}>
           <Text style={styles.primaryButtonText}>{savingsGoalName ? "Update Goal" : "Set Goal"}</Text>
         </TouchableOpacity>
+        {savingsGoalName && ( // Show Clear Goal button only if a goal is set
+            <TouchableOpacity style={styles.dangerButton} onPress={handleClearGoal}>
+                <Text style={styles.primaryButtonText}>Clear Goal</Text>
+            </TouchableOpacity>
+        )}
       </SectionCard>
 
       {/* Savings Goal Progress Display & Contribution Section */}
       {savingsGoalAmount > 0 && (
-        <SectionCard title={`Goal: ${savingsGoalName}`}>
+        <SectionCard title={`Goal Progress: ${savingsGoalName}`}>
           <SummaryDetailRow
             label="Target Amount:"
             value={`$${savingsGoalAmount.toFixed(2)}`}
@@ -399,10 +533,11 @@ const BudgetPlanner = () => {
 
           {currentSavedAmount < savingsGoalAmount && (
             <View style={styles.contributionSection}>
+                <Text style={styles.contributionTitle}>Make a Contribution:</Text>
               <TextInput
                 ref={contributionAmountInputRef}
                 style={styles.input}
-                placeholder="Contribution Amount"
+                placeholder="Amount to save"
                 placeholderTextColor={AppColors.placeholderText}
                 keyboardType="numeric"
                 value={contributionInput}
@@ -475,6 +610,12 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     backgroundColor: AppColors.background,
   },
+  loadingContainer: { // For loading state
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: AppColors.background,
+  },
   section: {
     backgroundColor: AppColors.surface,
     borderRadius: 8,
@@ -532,24 +673,31 @@ const styles = StyleSheet.create({
   overBudget: {
     color: AppColors.danger,
   },
-  primaryButton: { // Renamed from addButton
+  primaryButton: {
     backgroundColor: AppColors.primary,
     paddingVertical: 14,
     borderRadius: 6,
     alignItems: 'center',
     marginTop: 8,
   },
-  primaryButtonText: { // Renamed from buttonText
+  primaryButtonText: {
     color: AppColors.lightText,
     fontWeight: 'bold',
     fontSize: 16,
   },
   secondaryButton: {
-    backgroundColor: AppColors.secondary, // Use a different color for "Add to Savings"
+    backgroundColor: AppColors.secondary,
     paddingVertical: 14,
     borderRadius: 6,
     alignItems: 'center',
     marginTop: 8,
+  },
+  dangerButton: { // For Clear Goal
+    backgroundColor: AppColors.danger,
+    paddingVertical: 14,
+    borderRadius: 6,
+    alignItems: 'center',
+    marginTop: 10, // Add some space
   },
   expenseItem: {
     flexDirection: 'row',
@@ -581,33 +729,37 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     paddingVertical: 20,
   },
-  // Styles for Savings Goal
   savedAmountStyle: {
-    color: AppColors.secondary, // Highlight saved amount
+    color: AppColors.secondary,
     fontWeight: 'bold',
   },
   progressBarTrack: {
     width: '100%',
     borderRadius: 5,
     overflow: 'hidden',
-    marginTop: 12, // Add some space above
-    marginBottom: 6, // Add some space below
+    marginTop: 12,
+    marginBottom: 6,
   },
   progressBarFill: {
-    // height is set inline by component
     borderRadius: 5,
   },
   progressText: {
     textAlign: 'right',
     fontSize: 14,
     color: AppColors.textSecondary,
-    marginBottom: 16, // Space before contribution section
+    marginBottom: 16,
   },
   contributionSection: {
-    marginTop: 10, // Add some space above the contribution input
+    marginTop: 10,
     borderTopWidth: 1,
     borderTopColor: AppColors.border,
     paddingTop: 16,
+  },
+  contributionTitle: { // Title for the contribution input area
+    fontSize: 16,
+    color: AppColors.text,
+    marginBottom: 8,
+    fontWeight: '600',
   },
   goalReachedText: {
     fontSize: 18,

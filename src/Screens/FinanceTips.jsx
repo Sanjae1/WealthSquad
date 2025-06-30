@@ -34,6 +34,7 @@ const getCategoryIcon = (category) => {
     Investing: 'trending-up',
     Saving: 'account-balance-wallet', // or 'savings' if available and suitable
     Budgeting: 'calculate',
+    'Auto Loans': 'directions-car',
     Credit: 'credit-card',
     'Real Estate': 'home-work',
     Retirement: 'elderly',
@@ -51,7 +52,7 @@ const FinanceTips = ({ navigation }) => {
   const [loading, setLoading] = useState(true);
 
   const categories = [
-    'All', 'Investing', 'Saving', 'Budgeting', 'Credit', 'Real Estate', 'Retirement', 'Taxes',
+    'All', 'Investing', 'Saving', 'Auto Loans', 'Budgeting', 'Credit', 'Real Estate', 'Retirement', 'Taxes',
   ];
 
   const fetchTips = useCallback(async () => {
@@ -63,14 +64,24 @@ const FinanceTips = ({ navigation }) => {
       }
       const { data, error } = await query;
       if (error) throw error;
-      setTips(data || []);
+      
+      // Validate and filter out invalid items
+      const validTips = (data || []).filter(tip => 
+        tip && 
+        typeof tip === 'object' && 
+        tip.id && 
+        tip.title && 
+        tip.content
+      );
+      
+      setTips(validTips);
     } catch (error) {
       console.error('Error fetching tips:', error.message);
-      // TODO: Show user-friendly error message (e.g., Toast)
+      setTips([]); // Set empty array on error
     } finally {
       setLoading(false);
     }
-  }, [selectedCategory]); // Re-fetch when category changes
+  }, [selectedCategory]);
 
   useEffect(() => {
     fetchTips();
@@ -87,45 +98,67 @@ const FinanceTips = ({ navigation }) => {
     setSelectedCategory(category);
   };
 
-  const renderTipCard = ({ item: tip }) => (
-    <Card
-      style={styles.tipCard}
-      onPress={() => navigation.navigate('FinanceTipDetail', { tipId: tip.id, tipTitle: tip.title })} // Pass ID and title
-      elevation={Platform.OS === 'ios' ? 3 : 5}
-    >
-      {tip.image_url && (
-        <Card.Cover source={{ uri: tip.image_url }} style={styles.cardImage} />
-      )}
-      <Card.Content style={styles.cardContent}>
-        <Chip
-          icon={() => <Icon name={getCategoryIcon(tip.category)} size={14} color={AppColors.primary} />}
-          style={styles.cardCategoryChip}
-          textStyle={styles.cardCategoryChipText}
-          mode="outlined"
-        >
-          {tip.category}
-        </Chip>
-        <Title style={styles.tipTitle}>{tip.title}</Title>
-        <Paragraph style={styles.tipExcerpt} numberOfLines={3}>
-          {tip.content}
-        </Paragraph>
-        <View style={styles.tipMeta}>
-          <View style={styles.authorInfo}>
-            {/* Add author_avatar_url to your Supabase table if you have avatars */}
-            {tip.author_avatar_url ? (
-              <Image source={{ uri: tip.author_avatar_url }} style={styles.authorAvatar} />
-            ) : (
-              <Icon name="person-outline" size={16} color={AppColors.textSecondary} style={{ marginRight: 4 }} />
-            )}
-            <Caption style={styles.metaText}>{tip.author || 'WealthSquad Team'}</Caption>
+  const renderTipCard = ({ item }) => {
+    if (!item || !item.id || !item.title) {
+      console.warn('Invalid tip item:', item);
+      return null;
+    }
+
+    const handleTipPress = () => {
+      try {
+        if (!item.id || !item.title) {
+          console.warn('Cannot navigate: Missing required tip data');
+          return;
+        }
+        navigation.navigate('FinanceTipDetail', {
+          tipId: item.id,
+          tipTitle: item.title,
+          tip: item // Pass the entire tip object for safety
+        });
+      } catch (error) {
+        console.error('Navigation error:', error);
+      }
+    };
+
+    return (
+      <Card
+        style={styles.tipCard}
+        onPress={handleTipPress}
+        elevation={Platform.OS === 'ios' ? 3 : 5}
+      >
+        {item.image_url && (
+          <Card.Cover source={{ uri: item.image_url }} style={styles.cardImage} />
+        )}
+        <Card.Content style={styles.cardContent}>
+          <Chip
+            icon={() => <Icon name={getCategoryIcon(item.category || 'All')} size={14} color={AppColors.primary} />}
+            style={styles.cardCategoryChip}
+            textStyle={styles.cardCategoryChipText}
+            mode="outlined"
+          >
+            {item.category || 'Uncategorized'}
+          </Chip>
+          <Title style={styles.tipTitle}>{item.title || 'Untitled'}</Title>
+          <Paragraph style={styles.tipExcerpt} numberOfLines={3}>
+            {item.content || 'No content available'}
+          </Paragraph>
+          <View style={styles.tipMeta}>
+            <View style={styles.authorInfo}>
+              {item.author_avatar_url ? (
+                <Image source={{ uri: item.author_avatar_url }} style={styles.authorAvatar} />
+              ) : (
+                <Icon name="person-outline" size={16} color={AppColors.textSecondary} style={{ marginRight: 4 }} />
+              )}
+              <Caption style={styles.metaText}>{item.author || 'WealthSquad Team'}</Caption>
+            </View>
+            <Caption style={styles.metaText}>
+              {item.created_at ? new Date(item.created_at).toLocaleDateString() : 'No date'}
+            </Caption>
           </View>
-          <Caption style={styles.metaText}>
-            {new Date(tip.created_at).toLocaleDateString()}
-          </Caption>
-        </View>
-      </Card.Content>
-    </Card>
-  );
+        </Card.Content>
+      </Card>
+    );
+  };
 
   const renderEmptyState = () => (
     <View style={styles.emptyStateContainer}>
@@ -189,13 +222,16 @@ const FinanceTips = ({ navigation }) => {
       </View>
 
       <FlatList
-        data={filteredTips}
-        renderItem={renderTipCard}
-        keyExtractor={(item) => item.id.toString()}
+        data={filteredTips.filter(tip => tip !== null && tip !== undefined)}
+        renderItem={({ item }) => {
+          if (!item) return null;
+          return renderTipCard({ item });
+        }}
+        keyExtractor={(item) => item?.id?.toString() || Math.random().toString()}
         contentContainerStyle={styles.tipsListContainer}
-        ListEmptyComponent={!loading ? renderEmptyState : null} // Show empty state only if not actively loading
-        onRefresh={fetchTips} // Pull to refresh
-        refreshing={loading && tips.length > 0} // Show refresh control only if loading more while data exists
+        ListEmptyComponent={!loading ? renderEmptyState : null}
+        onRefresh={fetchTips}
+        refreshing={loading && tips.length > 0}
       />
     </View>
   );

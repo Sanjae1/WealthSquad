@@ -8,13 +8,13 @@
  * - Recent transactions overview
  */
 
-import React, { useState, useCallback } from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
+import React, { useState, useCallback, useMemo } from 'react';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Alert, ActivityIndicator, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialIcons'; // Using MaterialIcons as per original
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useUser, useSupabaseClient } from '@supabase/auth-helpers-react';
-import RecentTransactions from '../Components/RecentTransaction'; // Corrected path assuming Components folder
+import MonthlyAverages from '../Components/MonthlyAverages';
 
 /**
  * Formats a balance value into a currency string
@@ -31,6 +31,42 @@ const formatBalance = (balance) => {
   });
 };
 
+/**
+ * Account Item Component
+ * Memoized component for rendering individual account items
+ */
+const AccountItem = React.memo(({ account, onUnlink, onPress }) => (
+  <TouchableOpacity 
+    style={styles.accountItem}
+    onPress={onPress}
+    activeOpacity={0.7}
+  >
+    <View style={styles.accountInfo}>
+      <Text style={styles.accountName}>{account.account_name || 'Unnamed Account'}</Text>
+      <Text style={styles.accountNumber}>
+        {account.last_four_digits ? `****${account.last_four_digits}` : 'No account number'}
+      </Text>
+    </View>
+    <View style={styles.accountActions}>
+      <Text style={[
+        styles.accountBalance,
+        { color: (account.balance || 0) >= 0 ? '#4CAF50' : '#E74C3C' }
+      ]}>
+        {formatBalance(account.balance)}
+      </Text>
+      <TouchableOpacity 
+        onPress={(e) => {
+          e.stopPropagation();
+          onUnlink(account.id);
+        }}
+        style={styles.unlinkButton}
+      >
+        <Icon name="link-off" size={20} color="#E74C3C" />
+      </TouchableOpacity>
+    </View>
+  </TouchableOpacity>
+));
+
 const Home = () => {
   // Navigation and authentication hooks
   const navigation = useNavigation();
@@ -41,15 +77,18 @@ const Home = () => {
   const [accounts, setAccounts] = useState([]);        // List of user's bank accounts
   const [totalBalance, setTotalBalance] = useState(0); // Total balance across all accounts
   const [loading, setLoading] = useState(true);        // Loading state for data fetching
+  const [error, setError] = useState(null);           // Error state for better error handling
+  const [isRefreshing, setIsRefreshing] = useState(false); // State for pull-to-refresh
 
   /**
    * Fetches user's bank accounts from Supabase
    * Updates accounts list and calculates total balance
    */
-  const fetchAccounts = useCallback(async () => {
+  const fetchAccounts = useCallback(async (showLoading = true) => {
     if (!user) {
       console.log('No user found, skipping fetch');
       setLoading(false);
+      setError('Authentication required');
       // Redirect to login if no user is found
       navigation.reset({
         index: 0,
@@ -59,8 +98,12 @@ const Home = () => {
     }
 
     try {
+      if (showLoading) {
+        setLoading(true);
+      }
+      setError(null);
+      
       console.log('Starting to fetch accounts for user:', user.id);
-      setLoading(true);
       
       // Fetch accounts from Supabase
       const { data, error } = await supabase
@@ -83,9 +126,24 @@ const Home = () => {
       setTotalBalance(total);
     } catch (error) {
       console.error('Error in fetchAccounts:', error);
-      Alert.alert('Error', 'Failed to load accounts. Please try again.');
+      setError(error.message || 'Failed to load accounts. Please try again.');
+      Alert.alert(
+        'Error',
+        'Failed to load accounts. Would you like to try again?',
+        [
+          {
+            text: 'Cancel',
+            style: 'cancel'
+          },
+          {
+            text: 'Retry',
+            onPress: () => fetchAccounts(true)
+          }
+        ]
+      );
     } finally {
       setLoading(false);
+      setIsRefreshing(false);
     }
   }, [user, supabase, navigation]);
 
@@ -93,9 +151,15 @@ const Home = () => {
   useFocusEffect(
     useCallback(() => {
       console.log('Home screen focused, user:', user?.id);
-      fetchAccounts();
+      fetchAccounts(true);
     }, [fetchAccounts])
   );
+
+  // Handle pull-to-refresh
+  const handleRefresh = useCallback(() => {
+    setIsRefreshing(true);
+    fetchAccounts(false);
+  }, [fetchAccounts]);
 
   /**
    * Handles user logout
@@ -130,12 +194,25 @@ const Home = () => {
     }
   };
 
-  /**
-   * Handles unlinking a bank account
-   * Deletes associated transactions and the account itself
-   * @param {string} accountId - ID of the account to unlink
-   */
-  const handleUnlinkAccount = async (accountId) => {
+  // Memoize the accounts list to prevent unnecessary re-renders
+  const sortedAccounts = useMemo(() => {
+    return [...accounts].sort((a, b) => {
+      // Sort by balance (highest to lowest)
+      return (b.balance || 0) - (a.balance || 0);
+    });
+  }, [accounts]);
+
+  // Memoize the total balance calculation
+  const formattedTotalBalance = useMemo(() => {
+    return formatBalance(totalBalance);
+  }, [totalBalance]);
+
+  // Memoize the account item handlers
+  const handleAccountPress = useCallback((account) => {
+    navigation.navigate('AccountTransactions', { account });
+  }, [navigation]);
+
+  const handleUnlinkAccount = useCallback(async (accountId) => {
     Alert.alert(
       'Unlink Account',
       'Are you sure you want to unlink this account? This will remove all associated transactions.',
@@ -149,6 +226,7 @@ const Home = () => {
           style: 'destructive',
           onPress: async () => {
             try {
+              setLoading(true);
               // Delete associated transactions first
               const { error: transactionError } = await supabase
                 .from('transactions')
@@ -166,20 +244,32 @@ const Home = () => {
               if (accountError) throw accountError;
 
               // Refresh the accounts list
-              fetchAccounts();
+              fetchAccounts(false);
             } catch (error) {
               console.error('Error unlinking account:', error);
               Alert.alert('Error', 'Failed to unlink account. Please try again.');
+            } finally {
+              setLoading(false);
             }
           }
         }
       ]
     );
-  };
+  }, [supabase, fetchAccounts]);
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView style={styles.scrollView}>
+      <ScrollView 
+        style={styles.scrollView}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefreshing}
+            onRefresh={handleRefresh}
+            colors={['#4CAF50']}
+            tintColor="#4CAF50"
+          />
+        }
+      >
         {/* Header Section */}
         <View style={styles.header}>
           <Text style={styles.headerTitle}>Welcome, {user?.user_metadata?.full_name || 'User'}!</Text>
@@ -196,49 +286,36 @@ const Home = () => {
               <ActivityIndicator size="large" color="#4CAF50" />
               <Text style={styles.loadingText}>Loading accounts...</Text>
             </View>
+          ) : error ? (
+            <View style={styles.errorContainer}>
+              <Icon name="error-outline" size={48} color="#E74C3C" />
+              <Text style={styles.errorText}>{error}</Text>
+              <TouchableOpacity 
+                style={styles.retryButton}
+                onPress={() => fetchAccounts(true)}
+              >
+                <Text style={styles.retryButtonText}>Retry</Text>
+              </TouchableOpacity>
+            </View>
           ) : (
             <>
               {/* Total Balance Display */}
               <View style={styles.balanceContainer}>
                 <Text style={styles.balanceLabel}>Total Balance</Text>
                 <Text style={styles.balanceAmount}>
-                  {formatBalance(totalBalance)}
+                  {formattedTotalBalance}
                 </Text>
               </View>
               
               {/* List of Bank Accounts */}
-              {accounts.length > 0 ? (
-                accounts.map((account) => (
-                  <TouchableOpacity 
+              {sortedAccounts.length > 0 ? (
+                sortedAccounts.map((account) => (
+                  <AccountItem
                     key={account.id} 
-                    style={styles.accountItem}
+                    account={account}
+                    onUnlink={handleUnlinkAccount}
                     onPress={() => navigation.navigate('AccountTransactions', { account })}
-                    activeOpacity={0.7}
-                  >
-                    <View style={styles.accountInfo}>
-                      <Text style={styles.accountName}>{account.account_name || 'Unnamed Account'}</Text>
-                      <Text style={styles.accountNumber}>
-                        {account.last_four_digits ? `****${account.last_four_digits}` : 'No account number'}
-                      </Text>
-                    </View>
-                    <View style={styles.accountActions}>
-                      <Text style={[
-                        styles.accountBalance,
-                        { color: (account.balance || 0) >= 0 ? '#4CAF50' : '#E74C3C' }
-                      ]}>
-                        {formatBalance(account.balance)}
-                      </Text>
-                      <TouchableOpacity 
-                        onPress={(e) => {
-                          e.stopPropagation();
-                          handleUnlinkAccount(account.id);
-                        }}
-                        style={styles.unlinkButton}
-                      >
-                        <Icon name="link-off" size={20} color="#E74C3C" />
-                      </TouchableOpacity>
-                    </View>
-                  </TouchableOpacity>
+                  />
                 ))
               ) : (
                 <Text style={styles.noAccountsText}>No accounts added yet</Text>
@@ -246,6 +323,9 @@ const Home = () => {
             </>
           )}
         </View>
+
+        {/* Monthly Averages Section */}
+        <MonthlyAverages />
 
         {/* Quick Actions Section */}
         <View style={styles.quickActions}>
@@ -260,9 +340,6 @@ const Home = () => {
             <ActionButton icon="trending-up" label="Investments" />
           </View>
         </View>
-
-        {/* Recent Transactions Section */}
-        <RecentTransactions />
       </ScrollView>
     </SafeAreaView>
   );
@@ -403,6 +480,29 @@ const styles = StyleSheet.create({
     color: '#757575',
     fontSize: 16,
     marginTop: 20,
+  },
+  errorContainer: {
+    padding: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  errorText: {
+    color: '#E74C3C',
+    fontSize: 16,
+    textAlign: 'center',
+    marginTop: 10,
+    marginBottom: 20,
+  },
+  retryButton: {
+    backgroundColor: '#4CAF50',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 5,
+  },
+  retryButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '500',
   },
 });
 

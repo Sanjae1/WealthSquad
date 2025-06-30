@@ -19,7 +19,10 @@ const formatCurrencySimple = (value) => {
 };
 
 const generateAmortizationSchedule = (principal, annualRate, years, M_calculated) => {
-  if (principal <= 0 || years <= 0 || M_calculated <= 0) return [];
+  if (principal <= 0 || years <= 0 || M_calculated <= 0) {
+    console.error("Invalid input for amortization schedule:", {principal, annualRate, years, M_calculated});
+    return [];
+  }
 
   const schedule = [];
   let currentBalance = parseFloat(principal);
@@ -48,14 +51,23 @@ const generateAmortizationSchedule = (principal, annualRate, years, M_calculated
     return schedule;
   }
 
+  // Calculate the actual monthly payment needed to pay off the loan
+  let actualMonthlyPayment;
+  if (monthlyInterestRate === 0) {
+    actualMonthlyPayment = currentBalance / numberOfPayments;
+  } else {
+    actualMonthlyPayment = (currentBalance * monthlyInterestRate) / (1 - Math.pow(1 + monthlyInterestRate, -numberOfPayments));
+  }
+
+  // Use the larger of the calculated payment and the provided payment
+  const paymentToUse = Math.max(actualMonthlyPayment, M_calculated);
 
   for (let month = 1; month <= numberOfPayments; month++) {
     const interestComponent = currentBalance * monthlyInterestRate;
-    let principalComponent = M_calculated - interestComponent;
-    let actualPaymentThisMonth = M_calculated;
+    let principalComponent = paymentToUse - interestComponent;
+    let actualPaymentThisMonth = paymentToUse;
 
     // Adjust for the last payment or if balance will be overpaid
-    // Use a small epsilon for floating point comparisons
     if (currentBalance - principalComponent <= 0.01 || month === numberOfPayments) {
       principalComponent = currentBalance;
       actualPaymentThisMonth = principalComponent + interestComponent;

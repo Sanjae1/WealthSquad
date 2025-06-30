@@ -1,8 +1,9 @@
 import React, { useState, useMemo, useCallback } from 'react';
-import { View, Text, TextInput, StyleSheet, ScrollView, Platform } from 'react-native';
+import { View, Text, TextInput, StyleSheet, ScrollView, Platform, TouchableOpacity } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import { Card, HelperText, Button } from 'react-native-paper';
 import Slider from '@react-native-community/slider'; // Import Slider
+import AmortizationModal from './AmmortizationModal';
 
 const CALCULATION_MODES = {
   CALC_PAYMENT: 'calcPayment',
@@ -40,12 +41,16 @@ const useDebounce = (callback, delay) => {
 const StudentLoanCalculator = () => {
   const [loanAmount, setLoanAmount] = useState(''); // This will store the raw input
   const [displayLoanAmount, setDisplayLoanAmount] = useState(''); // This will store the formatted string for display
-
   const [interestRate, setInterestRate] = useState('5');
   const [loanTerm, setLoanTerm] = useState('10'); // In years
   const [extraPayment, setExtraPayment] = useState('');
   const [calculationMode, setCalculationMode] = useState(CALCULATION_MODES.CALC_PAYMENT);
   const [desiredMonthlyPayment, setDesiredMonthlyPayment] = useState('');
+  // Add new state variables for lump sum payment
+  const [lumpSumAmount, setLumpSumAmount] = useState('');
+  const [lumpSumMonth, setLumpSumMonth] = useState('');
+  const [isAmortizationModalVisible, setIsAmortizationModalVisible] = useState(false);
+  const [currentAmortizationDetails, setCurrentAmortizationDetails] = useState(null);
 
   const handleReset = () => {
     setLoanAmount('');
@@ -55,6 +60,8 @@ const StudentLoanCalculator = () => {
     setExtraPayment('');
     setCalculationMode(CALCULATION_MODES.CALC_PAYMENT);
     setDesiredMonthlyPayment('');
+    setLumpSumAmount(''); // Reset lump sum amount
+    setLumpSumMonth(''); // Reset lump sum month
   };
 
   // --- Input Handlers with Masking ---
@@ -82,7 +89,8 @@ const StudentLoanCalculator = () => {
     const termInYearsInput = parseInt(loanTerm, 10);
     const additionalMonthlyPaymentInput = parseFloat(cleanNumberString(extraPayment)) || 0; // Clean before parsing
     const desiredPaymentInput = parseFloat(cleanNumberString(desiredMonthlyPayment)); // Clean before parsing
-
+    const lumpSumPaymentInput = parseFloat(cleanNumberString(lumpSumAmount)) || 0; // Parse lump sum amount
+    const lumpSumMonthInput = parseInt(lumpSumMonth, 10) || 0; // Parse lump sum month
 
     let warningMessage = null;
 
@@ -90,6 +98,10 @@ const StudentLoanCalculator = () => {
       warningMessage = "Loan amount must be a positive number.";
     } else if (isNaN(annualInterestRate) || annualInterestRate < 0) {
       warningMessage = "Interest rate cannot be negative.";
+    } else if (lumpSumPaymentInput < 0) {
+      warningMessage = "Lump sum payment cannot be negative.";
+    } else if (lumpSumMonthInput < 0) {
+      warningMessage = "Lump sum payment month cannot be negative.";
     }
 
     // ... (rest of your useMemo calculation logic remains the same)
@@ -207,18 +219,21 @@ const StudentLoanCalculator = () => {
     let remainingBalance = principal;
     let totalInterestPaid = 0;
     let actualPaymentCount = 0;
-    // Ensure N_calculated is a valid number before using it in maxIterations
-    const validNForIteration = (isFinite(N_calculated) && N_calculated > 0) ? N_calculated : (30 * 12); // Default to 30 years if N is bad
+    const validNForIteration = (isFinite(N_calculated) && N_calculated > 0) ? N_calculated : (30 * 12);
     const maxIterations = (calculationMode === CALCULATION_MODES.CALC_TERM ? validNForIteration : Math.max(validNForIteration, 30 * 12)) * 1.1;
 
-
-    while (remainingBalance > 0.005 && actualPaymentCount < maxIterations && M_actual > 0) { // Added M_actual > 0 check
+    while (remainingBalance > 0.005 && actualPaymentCount < maxIterations && M_actual > 0) {
       actualPaymentCount++;
       const interestForMonth = remainingBalance * monthlyInterestRate;
       let paymentThisMonth = M_actual;
       let principalPaidForMonth;
 
-      if (remainingBalance + interestForMonth <= M_actual) {
+      // Apply lump sum payment if it's the specified month
+      if (actualPaymentCount === lumpSumMonthInput && lumpSumPaymentInput > 0) {
+        remainingBalance = Math.max(0, remainingBalance - lumpSumPaymentInput);
+      }
+
+      if (remainingBalance + interestForMonth <= paymentThisMonth) {
         paymentThisMonth = remainingBalance + interestForMonth;
         principalPaidForMonth = remainingBalance;
         remainingBalance = 0;
@@ -227,9 +242,11 @@ const StudentLoanCalculator = () => {
         remainingBalance -= principalPaidForMonth;
       }
       totalInterestPaid += interestForMonth;
-      amortizationData.push({ month: actualPaymentCount, balance: Math.max(0, remainingBalance) }); // Ensure balance doesn't go negative
+      amortizationData.push({ month: actualPaymentCount, balance: Math.max(0, remainingBalance) });
 
-      if (calculationMode === CALCULATION_MODES.CALC_PAYMENT && additionalMonthlyPaymentInput > 0 && remainingBalance <= 0.005) {
+      if (calculationMode === CALCULATION_MODES.CALC_PAYMENT && 
+          (additionalMonthlyPaymentInput > 0 || lumpSumPaymentInput > 0) && 
+          remainingBalance <= 0.005) {
         break;
       }
     }
@@ -294,12 +311,39 @@ const StudentLoanCalculator = () => {
       warningMessage,
     };
 
-  }, [loanAmount, interestRate, loanTerm, extraPayment, calculationMode, desiredMonthlyPayment]);
+  }, [loanAmount, interestRate, loanTerm, extraPayment, calculationMode, desiredMonthlyPayment, lumpSumAmount, lumpSumMonth]);
 
   const displayPrincipalRaw = parseFloat(cleanNumberString(loanAmount));
   const validPrincipal = !isNaN(displayPrincipalRaw) && displayPrincipalRaw > 0 ? displayPrincipalRaw : 0;
-  const hasExtraPayment = calculationMode === CALCULATION_MODES.CALC_PAYMENT && (parseFloat(cleanNumberString(extraPayment)) || 0) > 0;
+  const hasExtraPayment = calculationMode === CALCULATION_MODES.CALC_PAYMENT && 
+    ((parseFloat(cleanNumberString(extraPayment)) || 0) > 0 || (parseFloat(cleanNumberString(lumpSumAmount)) || 0) > 0);
 
+  const openAmortizationModal = () => {
+    const principal = parseFloat(cleanNumberString(loanAmount));
+    const annualRate = parseFloat(interestRate);
+    const years = calculationMode === CALCULATION_MODES.CALC_PAYMENT ? parseInt(loanTerm, 10) : Math.ceil(results.actualNumberOfPayments / 12);
+    const monthlyPayment = calculationMode === CALCULATION_MODES.CALC_TERM ? 
+      parseFloat(cleanNumberString(desiredMonthlyPayment)) : 
+      parseFloat(cleanNumberString(results.yourMonthlyPayment));
+
+    if (principal > 0 && annualRate >= 0 && years > 0 && monthlyPayment > 0) {
+      setCurrentAmortizationDetails({
+        loanName: 'Student Loan',
+        principal,
+        annualRate,
+        years,
+        monthlyPayment,
+      });
+      setIsAmortizationModalVisible(true);
+    } else {
+      alert("Loan details are incomplete or invalid for amortization schedule.");
+    }
+  };
+
+  const closeAmortizationModal = () => {
+    setIsAmortizationModalVisible(false);
+    setCurrentAmortizationDetails(null);
+  };
 
   return (
     <ScrollView style={styles.container} keyboardShouldPersistTaps="handled">
@@ -395,7 +439,7 @@ const StudentLoanCalculator = () => {
                 placeholder="e.g., 100"
                 keyboardType="numeric"
                 value={extraPayment}
-                onChangeText={setExtraPayment} // Can add masking here
+                onChangeText={setExtraPayment}
               />
             </>
           )}
@@ -408,10 +452,29 @@ const StudentLoanCalculator = () => {
                 placeholder="e.g., 500"
                 keyboardType="numeric"
                 value={desiredMonthlyPayment}
-                onChangeText={setDesiredMonthlyPayment} // Can add masking here
+                onChangeText={setDesiredMonthlyPayment}
               />
             </>
           )}
+
+          {/* Lump sum payment inputs - available in both modes */}
+          <Text style={styles.label}>One-Time Lump Sum Payment ($) (Optional)</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="e.g., 1000"
+            keyboardType="numeric"
+            value={lumpSumAmount}
+            onChangeText={setLumpSumAmount}
+          />
+
+          <Text style={styles.label}>Lump Sum Payment Month (Optional)</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="e.g., 6 (for 6th month)"
+            keyboardType="numeric"
+            value={lumpSumMonth}
+            onChangeText={setLumpSumMonth}
+          />
 
           {/* --- Results Display --- */}
           {results.warningMessage && (
@@ -483,8 +546,22 @@ const StudentLoanCalculator = () => {
                  Enter all required fields (Interest Rate, Term/Desired Payment) to calculate.
              </HelperText>
            )}
+
+          {validPrincipal > 0 && !results.warningMessage && results.yourMonthlyPayment !== 'NaN.undefined' && parseFloat(cleanNumberString(results.yourMonthlyPayment)) > 0 && (
+            <TouchableOpacity 
+              style={[styles.amortizationButton, {backgroundColor: '#00796B'}]} 
+              onPress={openAmortizationModal}>
+              <Text style={styles.amortizationButtonText}>View Amortization Schedule</Text>
+            </TouchableOpacity>
+          )}
         </Card.Content>
       </Card>
+
+      <AmortizationModal
+        visible={isAmortizationModalVisible}
+        onClose={closeAmortizationModal}
+        loanDetails={currentAmortizationDetails}
+      />
     </ScrollView>
   );
 };
@@ -624,6 +701,18 @@ const styles = StyleSheet.create({
   resetButtonLabel: {
     color: '#6c757d', // Grey text
     fontSize: 15,
+  },
+  amortizationButton: {
+    marginTop: 15,
+    marginBottom: 10,
+    padding: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  amortizationButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: 'bold',
   },
 });
 
