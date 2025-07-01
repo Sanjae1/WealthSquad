@@ -127,7 +127,7 @@ const AppNavigator = () => (
       tabBarStyle: {
         paddingBottom: 5,
         paddingTop: 5,
-        height: 60,
+        height: 100,
         backgroundColor: '#FFFFFF',
         borderTopColor: '#E5E7EB',
         borderTopWidth: 1,
