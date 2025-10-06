@@ -18,6 +18,8 @@ import { useNavigation } from '@react-navigation/native';
 import { useSupabaseClient } from '@supabase/auth-helpers-react';
 import * as LocalAuthentication from 'expo-local-authentication';
 import * as SecureStore from 'expo-secure-store';
+import { useBiometrics } from '../hooks/useBiometrics';
+import sessionService from '../Services/sessionService';
 
 const Login = () => {
   // Navigation and Supabase client hooks
@@ -35,55 +37,19 @@ const Login = () => {
   const [isVisible, setIsVisible] = useState(true);      // Password visibility toggle
   const [isLoading, setIsLoading] = useState(false);     // Loading state during login
   const [errorMessage, setErrorMessage] = useState("");  // Error message display
-  const [isBiometricAvailable, setIsBiometricAvailable] = useState(false);
-  const [isBiometricConfigured, setIsBiometricConfigured] = useState(false);
+  
+  // Biometric authentication
+  const { available: biometricsAvailable, enabled: biometricsEnabled, type: biometricType, authenticate } = useBiometrics();
   const { email, password } = loginCredentials;
 
   useEffect(() => {
-    checkBiometricAvailability();
-    checkBiometricConfiguration();
+    // Don't auto-trigger biometric login on component mount
+    // Let user choose to use biometric login via the button
   }, []);
 
-  const checkBiometricAvailability = async () => {
-    try {
-      const compatible = await LocalAuthentication.hasHardwareAsync();
-      if (!compatible) {
-        console.log('Device is not compatible with biometric authentication');
-        setIsBiometricAvailable(false);
-        return;
-      }
-
-      const enrolled = await LocalAuthentication.isEnrolledAsync();
-      if (!enrolled) {
-        console.log('No biometrics enrolled');
-        setIsBiometricAvailable(false);
-        return;
-      }
-
-      const types = await LocalAuthentication.supportedAuthenticationTypesAsync();
-      console.log('Supported authentication types:', types);
-      
-      // Check if we have a stored refresh token
-      const refreshToken = await SecureStore.getItemAsync('supabase_refresh_token');
-      setIsBiometricConfigured(!!refreshToken);
-      setIsBiometricAvailable(true);
-    } catch (error) {
-      console.error('Biometric check error:', error);
-      setIsBiometricAvailable(false);
-      setIsBiometricConfigured(false);
-    }
-  };
-
-  const checkBiometricConfiguration = async () => {
-    try {
-      const refreshToken = await SecureStore.getItemAsync('supabase_refresh_token');
-      setIsBiometricConfigured(!!refreshToken);
-    } catch (error) {
-      console.error('Error checking biometric configuration:', error);
-      setIsBiometricConfigured(false);
-    }
-  };
-
+  /**
+   * Handle biometric login
+   */
   const handleBiometricLogin = async () => {
     try {
       setIsLoading(true);
@@ -95,34 +61,39 @@ const Login = () => {
         throw new Error('No stored credentials found. Please login with email and password first.');
       }
 
-      // Authenticate with biometrics
-      const result = await LocalAuthentication.authenticateAsync({
-        promptMessage: 'Confirm your identity',
-        cancelLabel: 'Cancel',
-        disableDeviceFallback: false,
-        fallbackLabel: 'Use password',
-      });
+      // Validate the refresh token format (basic check)
+      if (typeof refreshToken !== 'string' || refreshToken.length < 10) {
+        await SecureStore.deleteItemAsync('supabase_refresh_token');
+        throw new Error('Invalid stored credentials. Please login with email and password.');
+      }
 
+      // Authenticate with biometrics
+      const result = await authenticate('Confirm your identity');
       if (!result.success) {
-        if (result.error === 'user_cancel') {
+        if (result.cancelled) {
           return; // User cancelled, just return silently
         }
         throw new Error('Biometric authentication failed');
       }
 
-      // Set the session using the refresh token
-      const { data: { session }, error: sessionError } = await supabase.auth.setSession({
+      // Try to refresh the session using the stored refresh token
+      const { data: { session }, error: sessionError } = await supabase.auth.refreshSession({
         refresh_token: refreshToken
       });
 
       if (sessionError) {
         // If the refresh token is invalid, clear it and ask user to login with password
-        if (sessionError.message.includes('invalid refresh token')) {
+        if (sessionError.message.includes('invalid refresh token') || 
+            sessionError.message.includes('Auth session missing') ||
+            sessionError.message.includes('Refresh Token Not Found')) {
           await SecureStore.deleteItemAsync('supabase_refresh_token');
-          setIsBiometricConfigured(false);
           throw new Error('Session expired. Please login with your password.');
         }
         throw sessionError;
+      }
+
+      if (!session) {
+        throw new Error('No session received');
       }
 
       // Verify the session by getting the user
@@ -146,10 +117,13 @@ const Login = () => {
     }
   };
 
-  const promptBiometricSetup = async (userId) => {
+  /**
+   * Prompt user to enable biometric login after successful password login
+   */
+  const promptBiometricSetup = async () => {
     Alert.alert(
-      'Enable Biometric Login',
-      'Would you like to enable biometric login for faster access? You can change this later in settings.',
+      'Enable Biometric Sign-in',
+      `Would you like to enable ${biometricType} for faster access? You can change this later in settings.`,
       [
         {
           text: 'Not Now',
@@ -168,18 +142,17 @@ const Login = () => {
 
               // Store the refresh token securely
               await SecureStore.setItemAsync('supabase_refresh_token', session.refresh_token);
-              setIsBiometricConfigured(true);
               
               Alert.alert(
                 'Success',
-                'Biometric login has been enabled. You can now use your fingerprint or face ID to login.',
+                `${biometricType} sign-in has been enabled. You can now use your biometric authentication for faster access.`,
                 [{ text: 'OK' }]
               );
             } catch (error) {
               console.error('Error setting up biometric login:', error);
               Alert.alert(
                 'Error',
-                'Failed to enable biometric login. Please try again later.',
+                'Failed to enable biometric sign-in. Please try again later.',
                 [{ text: 'OK' }]
               );
             } finally {
@@ -237,9 +210,15 @@ const Login = () => {
         throw new Error('No session established');
       }
 
-      // Prompt user to enable biometric login if available
-      if (isBiometricAvailable && !isBiometricConfigured) {
-        promptBiometricSetup(data.user.id);
+      // Store the session persistently
+      const storeResult = await sessionService.storeSession(session);
+      if (!storeResult.success) {
+        console.warn('Failed to store session:', storeResult.error);
+      }
+
+      // Prompt user to enable biometric sign-in if available
+      if (biometricsAvailable && !biometricsEnabled) {
+        promptBiometricSetup();
       }
       
       // Navigate to main app screen
@@ -464,7 +443,7 @@ const Login = () => {
             </TouchableOpacity>
 
             {/* Biometric Login Button */}
-            {isBiometricAvailable && isBiometricConfigured && (
+            {biometricsAvailable && biometricsEnabled && (
               <TouchableOpacity 
                 onPress={handleBiometricLogin}
                 disabled={isLoading}
@@ -481,13 +460,18 @@ const Login = () => {
                 }}
               >
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  <Ionicons name="finger-print" size={24} color={MyColours.primary} style={{ marginRight: 8 }} />
+                  <Ionicons 
+                    name={biometricType === 'Face ID' ? "face-recognition" : "finger-print"} 
+                    size={24} 
+                    color={MyColours.primary} 
+                    style={{ marginRight: 8 }} 
+                  />
                   <Text style={{ 
                     color: MyColours.primary, 
                     fontSize: 16,
                     fontWeight: '600' 
                   }}>
-                    Login with Biometrics
+                    Login with {biometricType}
                   </Text>
                 </View>
               </TouchableOpacity>

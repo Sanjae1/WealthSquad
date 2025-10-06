@@ -56,17 +56,39 @@ const applicantTypes = [
 
 const housingCategories = [
   { label: "Select Housing Category...", value: ""},
+  { label: "Open Market Purchase", value: "openMarket" },
+  { label: "Build-On-Own-Land", value: "buildOnLand" },
+  { label: "House Lot Loan (Land Purchase)", value: "houseLot" },
   { label: "New Housing Developments", value: "newHousing" },
   { label: "Existing House (Price $12M or less)", value: "housePriceUnder12M" },
   { label: "Existing House (Price Over $12M) / Other", value: "otherwise" },
 ];
 
 const nhtLoanEligibilityRules = [
-  { applicantType: 'Single', housingCategory: 'newHousing', maxLoan: 7500000 },
-  { applicantType: 'Joint', housingCategory: 'newHousing', maxLoan: 15000000 },
-  { applicantType: 'Three', housingCategory: 'newHousing', maxLoan: 21000000 },
+  // Open Market Purchase
+  { applicantType: 'Single', housingCategory: 'openMarket', maxLoan: 9000000 }, // Special $12M handled in logic
+  { applicantType: 'Joint', housingCategory: 'openMarket', maxLoan: 17000000 },
+  { applicantType: 'Three', housingCategory: 'openMarket', maxLoan: 23000000 },
+  // Build-On-Own-Land
+  { applicantType: 'Single', housingCategory: 'buildOnLand', maxLoan: 11000000 },
+  { applicantType: 'Joint', housingCategory: 'buildOnLand', maxLoan: 17000000 },
+  { applicantType: 'Three', housingCategory: 'buildOnLand', maxLoan: 23000000 },
+  // House Lot Loan
+  { applicantType: 'Single', housingCategory: 'houseLot', maxLoan: 5000000 },
+  { applicantType: 'Joint', housingCategory: 'houseLot', maxLoan: 7000000 },
+  { applicantType: 'Three', housingCategory: 'houseLot', maxLoan: 10500000 },
+  // New Housing Developments (assume same as open market for now)
+  { applicantType: 'Single', housingCategory: 'newHousing', maxLoan: 9000000 },
+  { applicantType: 'Joint', housingCategory: 'newHousing', maxLoan: 17000000 },
+  { applicantType: 'Three', housingCategory: 'newHousing', maxLoan: 23000000 },
+  // Existing House (Price $12M or less)
   { applicantType: 'Single', housingCategory: 'housePriceUnder12M', maxLoan: 8500000 },
+  { applicantType: 'Joint', housingCategory: 'housePriceUnder12M', maxLoan: 17000000 },
+  { applicantType: 'Three', housingCategory: 'housePriceUnder12M', maxLoan: 25500000 },
+  // Existing House (Price Over $12M) / Other
   { applicantType: 'Single', housingCategory: 'otherwise', maxLoan: 5500000 },
+  { applicantType: 'Joint', housingCategory: 'otherwise', maxLoan: 11000000 },
+  { applicantType: 'Three', housingCategory: 'otherwise', maxLoan: 16500000 },
 ];
 
 // --- Main Component ---
@@ -114,20 +136,30 @@ const MortgageCalculatorScreen = () => {
       return;
     }
 
-    const rule = nhtLoanEligibilityRules.find(r =>
-      r.applicantType === applicantType && r.housingCategory === housingCategory
-    );
-
-    const maxLoan = rule ? rule.maxLoan : 0;
+    let maxLoan = 0;
+    // Special $12M rule for single applicant, open market, ≤ $14M
+    if (
+      applicantType === 'Single' &&
+      housingCategory === 'openMarket' &&
+      parseCurrency(saleAmount) > 0 &&
+      parseCurrency(saleAmount) <= 14000000
+    ) {
+      maxLoan = 12000000;
+    } else {
+      const rule = nhtLoanEligibilityRules.find(r =>
+        r.applicantType === applicantType && r.housingCategory === housingCategory
+      );
+      maxLoan = rule ? rule.maxLoan : 0;
+    }
     setNhtMaxLoanPossible(maxLoan);
 
     const currentNhtLoanNum = parseCurrency(nhtLoanAmount);
-    if (maxLoan > 0 && (currentNhtLoanNum > maxLoan || currentNhtLoanNum === 0 || nhtLoanAmount === '' || !rule)) {
+    if (maxLoan > 0 && (currentNhtLoanNum > maxLoan || currentNhtLoanNum === 0 || nhtLoanAmount === '' )) {
       setNhtLoanAmount(String(maxLoan));
     } else if (maxLoan === 0) {
       setNhtLoanAmount('0');
     }
-  }, [applicantType, housingCategory, incomeBand]);
+  }, [applicantType, housingCategory, incomeBand, saleAmount]);
 
   // Update calculation logic trigger
   const calculateMortgage = useCallback(() => {
@@ -417,21 +449,19 @@ const MortgageCalculatorScreen = () => {
         
         <View style={styles.notesSection}>
             <Text style={[styles.noteTitle, { color: textColor }]}>Important Notes:</Text>
-            <Text style={[styles.noteText, { color: textColor }]}>
-                - Click 'Amortization Schedule' (not implemented here) to see monthly payments over time.
-            </Text>
-            <Text style={[styles.noteText, { color: textColor }]}>
-                - For NHT: Maximum loan amounts and rates vary. Effective March 17, 2023, e.g., Single Applicant for New Housing Developments $7.5M @ (rate based on income). House price $12M or less $8.5M @ (rate). Otherwise $5.5M @ (rate).
-            </Text>
-             <TouchableOpacity onPress={() => Linking.openURL('https://www.nht.gov.jm/loans/affordability')}>
+            <Text style={[styles.noteText, { color: textColor }]}>NHT Loan Limits (Effective 2023):</Text>
+            <Text style={[styles.noteText, { color: textColor }]}>- <Text style={{fontWeight: 'bold'}}>Open Market Purchase:</Text> Single: $9M, Joint: $17M, Three: $23M. <Text style={{fontWeight: 'bold'}}>Special:</Text> Single applicants may access up to $12M if the unit price is $14M or less.</Text>
+            <Text style={[styles.noteText, { color: textColor }]}>- <Text style={{fontWeight: 'bold'}}>Build-On-Own-Land:</Text> Single: $11M, Joint: $17M, Three: $23M.</Text>
+            <Text style={[styles.noteText, { color: textColor }]}>- <Text style={{fontWeight: 'bold'}}>House Lot Loan:</Text> Single: $5M, Joint: $7M, Three: $10.5M.</Text>
+            <Text style={[styles.noteText, { color: textColor }]}>- <Text style={{fontWeight: 'bold'}}>New Housing Developments:</Text> Single: $9M, Joint: $17M, Three: $23M.</Text>
+            <Text style={[styles.noteText, { color: textColor }]}>- <Text style={{fontWeight: 'bold'}}>Existing House (≤ $12M):</Text> Single: $8.5M, Joint: $17M, Three: $25.5M.</Text>
+            <Text style={[styles.noteText, { color: textColor }]}>- <Text style={{fontWeight: 'bold'}}>Existing House ( $12M) / Other:</Text> Single: $5.5M, Joint: $11M, Three: $16.5M.</Text>
+            <Text style={[styles.noteText, { color: textColor }]}>- NHT interest rates are based on income band. See nht.gov.jm for details.</Text>
+            <Text style={[styles.noteText, { color: textColor }]}>- For Bank Loan: Interest rates, down payment, and terms may vary. Confirm with your mortgage provider.</Text>
+            <TouchableOpacity onPress={() => Linking.openURL('https://www.nht.gov.jm/loans/affordability')}>
                 <Text style={styles.link}>Visit nht.gov.jm for updated NHT info</Text>
             </TouchableOpacity>
-            <Text style={[styles.noteText, { color: textColor }]}>
-                - For Bank Loan: Interest Rates may vary. Repayment period may be shorter/longer. Downpayment may be more/less than 10%. Adjust accordingly after discussions with your mortgage officer.
-            </Text>
-            <Text style={[styles.disclaimer, { color: textColor }]}>
-                ** THIS DOES NOT INCLUDE FEES OR INSURANCE ASSOCIATED WITH A MORTGAGE. **
-            </Text>
+            <Text style={[styles.disclaimer, { color: textColor }]}>** THIS DOES NOT INCLUDE FEES OR INSURANCE ASSOCIATED WITH A MORTGAGE. **</Text>
         </View>
 
         <View style={styles.footer}>

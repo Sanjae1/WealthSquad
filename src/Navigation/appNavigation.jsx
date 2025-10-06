@@ -15,12 +15,21 @@ import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityI
 // Main Tab Screens
 import Home from '../Screens/Home';
 import AccountTransactionsScreen from '../Screens/AccountTransactionsScreen';
+import SelectBankScreen from '../Screens/SelectbankScreen.jsx';
+import CardDetailsScreen from '../Screens/CardDetailsScreen.jsx';
 import Calculators from '../Components/Calculators';
 import transactionsScreen from '../Components/transactionScreen';
 import BudgetPlanner from '../Screens/BudgetPlanner';
 import Settings from '../Screens/Settings.jsx';
 import FinanceTips from '../Screens/FinanceTips';
 import FinanceTipDetail from '../Screens/FinanceTipDetail';
+import Features from '../Screens/Features';
+// Bills Screens
+import BillPayDashboard from '../Screens/Bills/BillPayDashboard';
+import AddBillerScreen from '../Screens/Bills/AddBillerScreen';
+import LinkBillerScreen from '../Screens/Bills/LinkBillerScreen';
+import PaymentDetailsScreen from '../Screens/Bills/PaymentDetailsScreen';
+import ConfirmationScreen from '../Screens/Bills/ConfirmationScreen';
 
 // Financial Calculator Screens
 import MortgageCalculator from '../Screens/MortgageCalculator';
@@ -33,6 +42,7 @@ import StudentLoanCalculator from '../Components/StudentLoanCalculator';
 
 // Additional Settings/Menu Screens
 import CreditReportRequestForm from '../Screens/CreditReport';
+import Security from '../Screens/Security';
 
 // --- Navigator Definitions ---
 // Create navigators for different sections of the app
@@ -41,6 +51,7 @@ const CalculatorStack = createStackNavigator();
 const MenuStack = createStackNavigator();
 const TipsStack = createStackNavigator();
 const HomeStack = createStackNavigator();
+const BillsStack = createStackNavigator();
 
 /**
  * Home Stack Navigator
@@ -50,6 +61,8 @@ const HomeStackNavigator = () => (
   <HomeStack.Navigator screenOptions={{ headerShown: false }}>
     <HomeStack.Screen name="HomeScreen" component={Home} />
     <HomeStack.Screen name="AccountTransactions" component={AccountTransactionsScreen} />
+    <HomeStack.Screen name="SelectBankScreen" component={SelectBankScreen} />
+    <HomeStack.Screen name="CardDetails" component={CardDetailsScreen} />
   </HomeStack.Navigator>
 );
 
@@ -70,6 +83,20 @@ const TipsStackNavigator = () => (
       options={({ route }) => ({ title: route.params.tip.title })}
     />
   </TipsStack.Navigator>
+);
+
+/**
+ * Bills Stack Navigator
+ * Manages the bill pay flow screens
+ */
+const BillsStackNavigator = () => (
+  <BillsStack.Navigator screenOptions={{ headerShown: false }}>
+    <BillsStack.Screen name="BillDashboard" component={BillPayDashboard} />
+    <BillsStack.Screen name="AddBiller" component={AddBillerScreen} />
+    <BillsStack.Screen name="LinkBiller" component={LinkBillerScreen} />
+    <BillsStack.Screen name="PaymentDetails" component={PaymentDetailsScreen} />
+    <BillsStack.Screen name="Confirmation" component={ConfirmationScreen} />
+  </BillsStack.Navigator>
 );
 
 /**
@@ -104,6 +131,16 @@ const MenuStackNavigator = () => (
       name="Settings"
       component={Settings}
       options={{ title: 'More Options' }}
+    />
+    <MenuStack.Screen
+      name="Features"
+      component={Features}
+      options={{ title: 'Features' }}
+    />
+    <MenuStack.Screen
+      name="Security"
+      component={Security}
+      options={{ title: 'Security Settings' }}
     />
     <MenuStack.Screen
       name="CreditReport"
@@ -146,6 +183,18 @@ const AppNavigator = () => (
         tabBarLabel: 'Home',
         tabBarIcon: ({ color, size }) => (
           <MaterialCommunityIcons name="home-variant" color={color} size={size} />
+        ),
+      }}
+    />
+
+    {/* Bills Tab */}
+    <Tab.Screen
+      name="BillsTab"
+      component={BillsStackNavigator}
+      options={{
+        tabBarLabel: 'Bills',
+        tabBarIcon: ({ color, size }) => (
+          <MaterialCommunityIcons name="receipt" color={color} size={size} />
         ),
       }}
     />

@@ -14,6 +14,7 @@ import Splash from './src/Screens/Splash';
 import Login from './src/Screens/Login';
 import Signup from './src/Screens/Signup';
 import ForgotPasswordScreen from './src/Screens/ForgotPasswordScreen';
+import BiometricAuthScreen from './src/Screens/BiometricAuthScreen';
 
 // Main Application Navigation
 import AppNavigator from './src/Navigation/appNavigation';
@@ -42,6 +43,7 @@ const App = () => {
           <Stack.Screen name="Login" component={Login} />
           <Stack.Screen name="Signup" component={Signup} />
           <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
+          <Stack.Screen name="BiometricAuth" component={BiometricAuthScreen} />
 
           {/* Main Application Navigation (Tab-based) */}
           <Stack.Screen name="AppMain" component={AppNavigator} />

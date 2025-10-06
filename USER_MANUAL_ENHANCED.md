@@ -149,7 +149,7 @@
    - Select "Security"
    - Enable 2FA
    - Follow setup instructions
-2. Set up biometric login:
+2. Set up password login:
    - Enable fingerprint/face ID
    - Confirm your identity
 3. Create a PIN:

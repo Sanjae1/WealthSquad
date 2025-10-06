@@ -4,6 +4,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { useNavigation } from '@react-navigation/native';
 import { useSupabaseClient } from '@supabase/auth-helpers-react';
+import * as SecureStore from 'expo-secure-store';
+import sessionService from '../Services/sessionService';
 
 const Settings = () => {
   const navigation = useNavigation();
@@ -11,9 +13,16 @@ const Settings = () => {
 
   const handleLogout = async () => {
     try {
+      // Sign out from Supabase (this clears the session)
       const { error } = await supabase.auth.signOut();
-      if (error) throw error;
       
+      if (error) {
+        throw error;
+      }
+
+      // Clear all stored session data
+      await sessionService.clearSession();
+
       // Reset the navigation state and navigate to Login
       navigation.reset({
         index: 0,

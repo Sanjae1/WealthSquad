@@ -16,6 +16,13 @@ const AddAccountScreen = ({ navigation }) => {
   const [currency, setCurrency] = useState('USD');
 
   const handleSave = async () => {
+    // Check if user is authenticated
+    if (!user?.id) {
+      Alert.alert('Error', 'User not authenticated. Please log in again.');
+      return;
+    }
+
+
     // Basic validation
     if (!accountName.trim() || !institutionName.trim() || !initialBalance || !accountType || !currency) {
       Alert.alert('Error', 'Please fill in all required fields');
@@ -41,7 +48,10 @@ const AddAccountScreen = ({ navigation }) => {
           user_id: user.id
         });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error inserting account:', error);
+        throw error;
+      }
 
       // Navigate back on success
       navigation.goBack();

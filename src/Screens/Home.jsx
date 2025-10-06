@@ -9,7 +9,7 @@
  */
 
 import React, { useState, useCallback, useMemo } from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Alert, ActivityIndicator, RefreshControl } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Alert, ActivityIndicator, RefreshControl, Modal, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialIcons'; // Using MaterialIcons as per original
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
@@ -79,6 +79,7 @@ const Home = () => {
   const [loading, setLoading] = useState(true);        // Loading state for data fetching
   const [error, setError] = useState(null);           // Error state for better error handling
   const [isRefreshing, setIsRefreshing] = useState(false); // State for pull-to-refresh
+  const [isAddAccountSheetVisible, setIsAddAccountSheetVisible] = useState(false);
 
   /**
    * Fetches user's bank accounts from Supabase
@@ -272,7 +273,8 @@ const Home = () => {
       >
         {/* Header Section */}
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>Welcome, {user?.user_metadata?.full_name || 'User'}!</Text>
+          <Text style={styles.headerTitle}>Welcome, { (`${user?.user_metadata?.first_name || ''} ${user?.user_metadata?.last_name || ''}`.trim()) || 'User'
+  }!</Text>
           <TouchableOpacity onPress={handleLogout}>
             <Icon name="logout" size={24} color="#757575" />
           </TouchableOpacity>
@@ -331,7 +333,7 @@ const Home = () => {
         <View style={styles.quickActions}>
           <Text style={styles.sectionTitle}>Quick Actions</Text>
           <View style={styles.actionButtonsContainer}>
-            <TouchableOpacity onPress={() => navigation.navigate('SelectBankScreen')}>
+            <TouchableOpacity onPress={() => setIsAddAccountSheetVisible(true)}>
               <ActionButton icon="add" label="Add Account" />
             </TouchableOpacity>
             <TouchableOpacity onPress={() => navigation.navigate('BudgetTab')}>
@@ -341,6 +343,44 @@ const Home = () => {
           </View>
         </View>
       </ScrollView>
+
+      {/* Add Account Bottom Sheet */}
+      <Modal
+        animationType="slide"
+        transparent
+        visible={isAddAccountSheetVisible}
+        onRequestClose={() => setIsAddAccountSheetVisible(false)}
+      >
+        <Pressable style={styles.sheetBackdrop} onPress={() => setIsAddAccountSheetVisible(false)}>
+          <View style={styles.bottomSheetContainer}>
+            <View style={styles.sheetHandle} />
+            <Text style={styles.sheetTitle}>Add Account</Text>
+            <TouchableOpacity
+              style={styles.sheetAction}
+              onPress={() => {
+                setIsAddAccountSheetVisible(false);
+                navigation.navigate('SelectBankScreen');
+              }}
+            >
+              <Icon name="account-balance" size={24} color="#4CAF50" />
+              <Text style={styles.sheetActionText}>Add Bank</Text>
+              <Icon name="chevron-right" size={24} color="#9E9E9E" />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.sheetAction}
+              onPress={() => {
+                setIsAddAccountSheetVisible(false);
+                navigation.navigate('CardDetails');
+              }}
+            >
+              <Icon name="credit-card" size={24} color="#4CAF50" />
+              <Text style={styles.sheetActionText}>Add Card</Text>
+              <Icon name="chevron-right" size={24} color="#9E9E9E" />
+            </TouchableOpacity>
+          </View>
+        </Pressable>
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -416,6 +456,47 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     marginHorizontal: 16,
     elevation: 2,
+  },
+  sheetBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.3)',
+    justifyContent: 'flex-end',
+  },
+  bottomSheetContainer: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    paddingBottom: 24,
+    paddingTop: 8,
+  },
+  sheetHandle: {
+    alignSelf: 'center',
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: '#E0E0E0',
+    marginVertical: 8,
+  },
+  sheetTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  sheetAction: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#EEEEEE',
+  },
+  sheetActionText: {
+    flex: 1,
+    marginLeft: 12,
+    fontSize: 16,
+    color: '#333333',
   },
    actionButtonsContainer: {
     flexDirection: 'row',

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, ActivityIndicator, ScrollView, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, ActivityIndicator, ScrollView, StyleSheet, Alert } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useUser, useSupabaseClient } from '@supabase/auth-helpers-react';
@@ -71,6 +71,13 @@ const SelectFakeAccountsScreen = () => {
   };
 
   const handleAddAccounts = async () => {
+    // Check if user is authenticated
+    if (!user?.id) {
+      Alert.alert('Error', 'User not authenticated. Please log in again.');
+      return;
+    }
+
+    
     setLoading(true);
     const accountsToAdd = dummyAccounts[bankName].filter(acc => selectedAccounts[acc.id]);
 

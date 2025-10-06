@@ -138,7 +138,7 @@
    - Account preferences
 
 ### 6.2 Security Features
-- Enable biometric authentication
+- Enable password authentication
 - Set up PIN code
 - Manage session timeouts
 - Update password
