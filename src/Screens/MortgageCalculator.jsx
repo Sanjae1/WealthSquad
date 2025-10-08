@@ -9,12 +9,40 @@ import {
   Platform,
   TouchableOpacity,
   Linking,
-  Appearance, // For dark mode detection if desired
+  Appearance,
 } from 'react-native';
-import { Picker } from '@react-native-picker/picker'; // yarn add @react-native-picker/picker or expo install @react-native-picker/picker
+import { Picker } from '@react-native-picker/picker';
+import AmortizationModal from '../Components/AmmortizationModal'; // Assuming this path is correct
 
-
-import AmortizationModal from '../Components/AmmortizationModal';
+// --- Theme Constants (for easy styling and rebranding) ---
+const theme = {
+  COLORS: {
+    primary: '#00796B', // Teal
+    primaryLight: '#B2DFDB',
+    background: { light: '#F4F7F9', dark: '#121212' },
+    card: { light: '#FFFFFF', dark: '#1E1E1E' },
+    text: { light: '#212121', dark: '#EAEAEA' },
+    textSecondary: { light: '#757575', dark: '#A0A0A0' },
+    inputBg: { light: '#F0F0F0', dark: '#333333' },
+    border: { light: '#DCDCDC', dark: '#444444' },
+    white: '#FFFFFF',
+    black: '#000000',
+    warning: '#FFA726', // Orange
+    error: '#D32F2F',   // Red
+    link: '#1E90FF',    // DodgerBlue
+  },
+  SPACING: {
+    small: 8,
+    medium: 16,
+    large: 24,
+  },
+  FONT_SIZES: {
+    title: 28,
+    subtitle: 18,
+    body: 16,
+    caption: 12,
+  },
+};
 
 // --- Helper Functions ---
 const parseCurrency = (value) => {
@@ -32,7 +60,7 @@ const calculateMonthlyPayment = (principal, annualRate, years) => {
   if (principal <= 0 || annualRate < 0 || years <= 0) return 0;
   const monthlyRate = annualRate / 100 / 12;
   const numberOfPayments = years * 12;
-  if (monthlyRate === 0) return principal / numberOfPayments; // Simple division for 0% interest
+  if (monthlyRate === 0) return principal / numberOfPayments;
   return (
     principal *
     (monthlyRate * Math.pow(1 + monthlyRate, numberOfPayments)) /
@@ -40,7 +68,7 @@ const calculateMonthlyPayment = (principal, annualRate, years) => {
   );
 };
 
-// --- Data ---
+// --- Data (Unchanged) ---
 const incomeBandsData = [
   { label: "Over $100,000", value: "over100k", nhtRate: 5.00 },
   { label: "$42,001 - $100,000.99", value: "42k-100k", nhtRate: 4.00 },
@@ -55,7 +83,7 @@ const applicantTypes = [
 ];
 
 const housingCategories = [
-  { label: "Select Housing Category...", value: ""},
+  { label: "Select Housing Category...", value: "" },
   { label: "Open Market Purchase", value: "openMarket" },
   { label: "Build-On-Own-Land", value: "buildOnLand" },
   { label: "House Lot Loan (Land Purchase)", value: "houseLot" },
@@ -65,593 +93,370 @@ const housingCategories = [
 ];
 
 const nhtLoanEligibilityRules = [
-  // Open Market Purchase
-  { applicantType: 'Single', housingCategory: 'openMarket', maxLoan: 9000000 }, // Special $12M handled in logic
+  { applicantType: 'Single', housingCategory: 'openMarket', maxLoan: 9000000 },
   { applicantType: 'Joint', housingCategory: 'openMarket', maxLoan: 17000000 },
   { applicantType: 'Three', housingCategory: 'openMarket', maxLoan: 23000000 },
-  // Build-On-Own-Land
   { applicantType: 'Single', housingCategory: 'buildOnLand', maxLoan: 11000000 },
   { applicantType: 'Joint', housingCategory: 'buildOnLand', maxLoan: 17000000 },
   { applicantType: 'Three', housingCategory: 'buildOnLand', maxLoan: 23000000 },
-  // House Lot Loan
   { applicantType: 'Single', housingCategory: 'houseLot', maxLoan: 5000000 },
   { applicantType: 'Joint', housingCategory: 'houseLot', maxLoan: 7000000 },
   { applicantType: 'Three', housingCategory: 'houseLot', maxLoan: 10500000 },
-  // New Housing Developments (assume same as open market for now)
   { applicantType: 'Single', housingCategory: 'newHousing', maxLoan: 9000000 },
   { applicantType: 'Joint', housingCategory: 'newHousing', maxLoan: 17000000 },
   { applicantType: 'Three', housingCategory: 'newHousing', maxLoan: 23000000 },
-  // Existing House (Price $12M or less)
   { applicantType: 'Single', housingCategory: 'housePriceUnder12M', maxLoan: 8500000 },
   { applicantType: 'Joint', housingCategory: 'housePriceUnder12M', maxLoan: 17000000 },
   { applicantType: 'Three', housingCategory: 'housePriceUnder12M', maxLoan: 25500000 },
-  // Existing House (Price Over $12M) / Other
   { applicantType: 'Single', housingCategory: 'otherwise', maxLoan: 5500000 },
   { applicantType: 'Joint', housingCategory: 'otherwise', maxLoan: 11000000 },
   { applicantType: 'Three', housingCategory: 'otherwise', maxLoan: 16500000 },
 ];
 
-// --- Main Component ---
-const MortgageCalculatorScreen = () => {
-  const [applicantType, setApplicantType] = useState(applicantTypes[0].value);
-  const [incomeBand, setIncomeBand] = useState(incomeBandsData[0].value);
-  const [housingCategory, setHousingCategory] = useState(housingCategories[0].value);
-  
-  const [saleAmount, setSaleAmount] = useState('25000000');
-  const [includeNHT, setIncludeNHT] = useState(true);
 
-  // NHT Specific
-  const [nhtLoanAmount, setNhtLoanAmount] = useState('7500000');
-  const [nhtYears, setNhtYears] = useState('30');
-  
-  // New NHT derived values
-  const [nhtMaxLoanPossible, setNhtMaxLoanPossible] = useState(0);
-  const [nhtEffectiveRate, setNhtEffectiveRate] = useState(0);
-  const [nhtInterestRateDisplay, setNhtInterestRateDisplay] = useState('0.00');
+// --- Custom Hook for Calculator Logic ---
+const useMortgageCalculator = () => {
+    // Inputs
+    const [applicantType, setApplicantType] = useState(applicantTypes[0].value);
+    const [incomeBand, setIncomeBand] = useState(incomeBandsData[0].value);
+    const [housingCategory, setHousingCategory] = useState(housingCategories[1].value); // Default to a valid category
+    const [saleAmount, setSaleAmount] = useState('25000000');
+    const [includeNHT, setIncludeNHT] = useState(true);
+    const [nhtLoanAmount, setNhtLoanAmount] = useState('7500000');
+    const [nhtYears, setNhtYears] = useState('30');
+    const [bankInterestRate, setBankInterestRate] = useState('8.00');
+    const [bankYears, setBankYears] = useState('30');
+    
+    // Derived & Calculated State
+    const [nhtMaxLoanPossible, setNhtMaxLoanPossible] = useState(0);
+    const [nhtEffectiveRate, setNhtEffectiveRate] = useState(0);
+    const [downPayment, setDownPayment] = useState(0);
+    const [amountToBorrow, setAmountToBorrow] = useState(0);
+    const [nhtMonthlyPayment, setNhtMonthlyPayment] = useState(0);
+    const [bankLoanAmount, setBankLoanAmount] = useState(0);
+    const [bankMonthlyPayment, setBankMonthlyPayment] = useState(0);
+    const [totalMonthlyPayment, setTotalMonthlyPayment] = useState(0);
 
-  // Bank Specific
-  const [bankInterestRate, setBankInterestRate] = useState('8.00');
-  const [bankYears, setBankYears] = useState('30');
+    // Effect for NHT Max Loan and Rate
+    useEffect(() => {
+        const selectedIncomeBand = incomeBandsData.find(band => band.value === incomeBand);
+        const currentRate = selectedIncomeBand ? selectedIncomeBand.nhtRate : 0;
+        setNhtEffectiveRate(currentRate);
 
-  // --- Calculated Values State ---
-  const [downPayment, setDownPayment] = useState(0);
-  const [amountToBorrow, setAmountToBorrow] = useState(0);
-  const [nhtMonthlyPayment, setNhtMonthlyPayment] = useState(0);
-  const [bankLoanAmount, setBankLoanAmount] = useState(0);
-  const [bankMonthlyPayment, setBankMonthlyPayment] = useState(0);
-  const [totalMonthlyPayment, setTotalMonthlyPayment] = useState(0);
+        if (!applicantType || !housingCategory) {
+            setNhtMaxLoanPossible(0);
+            return;
+        }
 
-  const [isAmortizationModalVisible, setIsAmortizationModalVisible] = useState(false);
-  const [currentAmortizationDetails, setCurrentAmortizationDetails] = useState(null);
+        let maxLoan = 0;
+        if (applicantType === 'Single' && housingCategory === 'openMarket' && parseCurrency(saleAmount) <= 14000000) {
+            maxLoan = 12000000;
+        } else {
+            const rule = nhtLoanEligibilityRules.find(r => r.applicantType === applicantType && r.housingCategory === housingCategory);
+            maxLoan = rule ? rule.maxLoan : 0;
+        }
+        setNhtMaxLoanPossible(maxLoan);
 
-  // Effect to determine NHT Max Loan and Effective Rate
-  useEffect(() => {
-    const selectedIncomeBandDetail = incomeBandsData.find(band => band.value === incomeBand);
-    const currentRate = selectedIncomeBandDetail ? selectedIncomeBandDetail.nhtRate : 0;
-    setNhtEffectiveRate(currentRate);
-    setNhtInterestRateDisplay(currentRate.toFixed(2));
+        const currentNhtLoanNum = parseCurrency(nhtLoanAmount);
+        if (maxLoan > 0 && (currentNhtLoanNum > maxLoan || currentNhtLoanNum === 0)) {
+            setNhtLoanAmount(String(maxLoan));
+        } else if (maxLoan === 0) {
+            setNhtLoanAmount('0');
+        }
+    }, [applicantType, housingCategory, incomeBand, saleAmount]);
 
-    if (!applicantType || !housingCategory) {
-      setNhtMaxLoanPossible(0);
-      return;
-    }
+    // Main Calculation Logic
+    const calculateMortgage = useCallback(() => {
+        const parsedSaleAmount = parseCurrency(saleAmount);
+        const calcDownPayment = parsedSaleAmount * 0.10;
+        const calcAmountToBorrow = parsedSaleAmount * 0.90;
 
-    let maxLoan = 0;
-    // Special $12M rule for single applicant, open market, ≤ $14M
-    if (
-      applicantType === 'Single' &&
-      housingCategory === 'openMarket' &&
-      parseCurrency(saleAmount) > 0 &&
-      parseCurrency(saleAmount) <= 14000000
-    ) {
-      maxLoan = 12000000;
-    } else {
-      const rule = nhtLoanEligibilityRules.find(r =>
-        r.applicantType === applicantType && r.housingCategory === housingCategory
-      );
-      maxLoan = rule ? rule.maxLoan : 0;
-    }
-    setNhtMaxLoanPossible(maxLoan);
+        setDownPayment(calcDownPayment);
+        setAmountToBorrow(calcAmountToBorrow);
 
-    const currentNhtLoanNum = parseCurrency(nhtLoanAmount);
-    if (maxLoan > 0 && (currentNhtLoanNum > maxLoan || currentNhtLoanNum === 0 || nhtLoanAmount === '' )) {
-      setNhtLoanAmount(String(maxLoan));
-    } else if (maxLoan === 0) {
-      setNhtLoanAmount('0');
-    }
-  }, [applicantType, housingCategory, incomeBand, saleAmount]);
+        let finalNhtMonthly = 0;
+        let finalBankLoanAmount = calcAmountToBorrow;
+        let actualNhtLoanTaken = 0;
 
-  // Update calculation logic trigger
-  const calculateMortgage = useCallback(() => {
-    const parsedSaleAmount = parseCurrency(saleAmount);
-    const calcDownPayment = parsedSaleAmount * 0.10;
-    const calcAmountToBorrow = parsedSaleAmount * 0.90;
+        if (includeNHT) {
+            actualNhtLoanTaken = Math.min(parseCurrency(nhtLoanAmount), nhtMaxLoanPossible);
+            if (parseCurrency(nhtLoanAmount) > nhtMaxLoanPossible) {
+                setNhtLoanAmount(String(nhtMaxLoanPossible));
+            }
+            finalNhtMonthly = calculateMonthlyPayment(actualNhtLoanTaken, nhtEffectiveRate, parseInt(nhtYears, 10) || 0);
+            finalBankLoanAmount = Math.max(0, calcAmountToBorrow - actualNhtLoanTaken);
+        }
 
-    setDownPayment(calcDownPayment);
-    setAmountToBorrow(calcAmountToBorrow);
+        setNhtMonthlyPayment(finalNhtMonthly);
+        setBankLoanAmount(finalBankLoanAmount);
 
-    let finalNhtMonthly = 0;
-    let finalBankLoanAmount = calcAmountToBorrow;
-    let actualNhtLoanTaken = 0;
+        const finalBankMonthly = calculateMonthlyPayment(finalBankLoanAmount, parseFloat(bankInterestRate) || 0, parseInt(bankYears, 10) || 0);
+        setBankMonthlyPayment(finalBankMonthly);
+        setTotalMonthlyPayment(finalNhtMonthly + finalBankMonthly);
+    }, [saleAmount, includeNHT, nhtLoanAmount, nhtEffectiveRate, nhtYears, nhtMaxLoanPossible, bankInterestRate, bankYears]);
 
-    if (includeNHT) {
-      actualNhtLoanTaken = Math.min(parseCurrency(nhtLoanAmount), nhtMaxLoanPossible);
-      if (parseCurrency(nhtLoanAmount) > nhtMaxLoanPossible) {
-        setNhtLoanAmount(String(nhtMaxLoanPossible));
-        actualNhtLoanTaken = nhtMaxLoanPossible;
-      }
+    useEffect(() => {
+        calculateMortgage();
+    }, [calculateMortgage]);
 
-      const parsedNhtYears = parseInt(nhtYears, 10) || 0;
-
-      if (actualNhtLoanTaken > 0 && nhtEffectiveRate >= 0 && parsedNhtYears > 0) {
-        finalNhtMonthly = calculateMonthlyPayment(actualNhtLoanTaken, nhtEffectiveRate, parsedNhtYears);
-      } else {
-        finalNhtMonthly = 0;
-      }
-      finalBankLoanAmount = Math.max(0, calcAmountToBorrow - actualNhtLoanTaken);
-    }
-
-    setNhtMonthlyPayment(finalNhtMonthly);
-    setBankLoanAmount(finalBankLoanAmount);
-
-    const parsedBankRate = parseFloat(bankInterestRate) || 0;
-    const parsedBankYears = parseInt(bankYears, 10) || 0;
-    const finalBankMonthly = calculateMonthlyPayment(finalBankLoanAmount, parsedBankRate, parsedBankYears);
-
-    setBankMonthlyPayment(finalBankMonthly);
-    setTotalMonthlyPayment(finalNhtMonthly + finalBankMonthly);
-
-  }, [
-    saleAmount, includeNHT,
-    nhtLoanAmount, nhtEffectiveRate, nhtYears, nhtMaxLoanPossible,
-    bankInterestRate, bankYears
-  ]);
-
-  // Recalculate whenever relevant inputs change
-  useEffect(() => {
-    calculateMortgage();
-  }, [calculateMortgage]);
-
-  const currentYear = new Date().getFullYear();
-  const lastUpdatedDate = "September 28, 2023"; // From CSV
-
-  // Basic theme detection for text color
-  const isDarkMode = Appearance.getColorScheme() === 'dark';
-  const textColor = isDarkMode ? '#FFFFFF' : '#000000';
-  const inputBgColor = isDarkMode ? '#333333' : '#FFFFFF';
-  const inputTextColor = isDarkMode ? '#FFFFFF' : '#000000';
-  const borderColor = isDarkMode ? '#555555' : '#CCCCCC';
-
-  const openAmortizationModal = (loanType) => {
-    if (loanType === 'NHT' && includeNHT) {
-      const actualNhtLoanTaken = Math.min(parseCurrency(nhtLoanAmount), nhtMaxLoanPossible);
-      const pNhtYears = parseInt(nhtYears, 10);
-      if (actualNhtLoanTaken > 0 && nhtEffectiveRate >= 0 && pNhtYears > 0 && nhtMonthlyPayment > 0) {
-        setCurrentAmortizationDetails({
-          loanName: 'NHT Loan',
-          principal: actualNhtLoanTaken,
-          annualRate: nhtEffectiveRate,
-          years: pNhtYears,
-          monthlyPayment: nhtMonthlyPayment,
-        });
-        setIsAmortizationModalVisible(true);
-      } else {
-        alert("NHT loan details (Amount, Rate from Income, Years) are incomplete or invalid for amortization schedule.");
-      }
-    } else if (loanType === 'Bank') {
-      const pBankLoan = bankLoanAmount;
-      const pBankRate = parseFloat(bankInterestRate);
-      const pBankYears = parseInt(bankYears, 10);
-
-      if (pBankLoan > 0 && pBankRate >= 0 && pBankYears > 0 && bankMonthlyPayment > 0) {
-        setCurrentAmortizationDetails({
-          loanName: 'Bank Loan',
-          principal: pBankLoan,
-          annualRate: pBankRate,
-          years: pBankYears,
-          monthlyPayment: bankMonthlyPayment,
-        });
-        setIsAmortizationModalVisible(true);
-      } else {
-        alert("Bank loan details are incomplete or invalid for amortization schedule.");
-      }
-    }
-  };
-
-  const closeAmortizationModal = () => {
-    setIsAmortizationModalVisible(false);
-    setCurrentAmortizationDetails(null);
-  };
-
-  return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: isDarkMode ? '#121212' : '#F0F0F0' }]}>
-      <ScrollView contentContainerStyle={styles.container}>
-        <Text style={[styles.title, { color: textColor }]}>Mortgage Calculator</Text>
-        <Text style={[styles.subtitle, { color: textColor }]}>by @MsGillyJ</Text>
-        <TouchableOpacity onPress={() => Linking.openURL('http://www.financialcentsibility.com')}>
-          <Text style={styles.link}>www.financialcentsibility.com</Text>
-        </TouchableOpacity>
-        <Text style={[styles.metaText, { color: textColor }]}>Last updated: {lastUpdatedDate}</Text>
-
-        <View style={styles.section}>
-          <Text style={[styles.label, { color: textColor }]}>Select Applicant Type:</Text>
-          <Picker
-            selectedValue={applicantType}
-            style={[styles.picker, { backgroundColor: inputBgColor, color: inputTextColor }]}
-            itemStyle={{ color: inputTextColor }}
-            onValueChange={(itemValue) => setApplicantType(itemValue)}
-          >
-            {applicantTypes.map(type => (
-              <Picker.Item key={type.value} label={type.label} value={type.value} />
-            ))}
-          </Picker>
-
-          <Text style={[styles.label, { color: textColor }]}>Select Housing Category:</Text>
-          <Picker
-            selectedValue={housingCategory}
-            style={[styles.picker, { backgroundColor: inputBgColor, color: inputTextColor }]}
-            itemStyle={{ color: inputTextColor }}
-            onValueChange={(itemValue) => setHousingCategory(itemValue)}
-          >
-            {housingCategories.map(cat => (
-              <Picker.Item key={cat.value} label={cat.label} value={cat.value} />
-            ))}
-          </Picker>
-
-          <Text style={[styles.label, { color: textColor }]}>Enter Weekly Income Band:</Text>
-          <Picker
-            selectedValue={incomeBand}
-            style={[styles.picker, { backgroundColor: inputBgColor, color: inputTextColor }]}
-            itemStyle={{ color: inputTextColor }}
-            onValueChange={(itemValue) => setIncomeBand(itemValue)}
-          >
-            {incomeBandsData.map(band => (
-              <Picker.Item key={band.value} label={band.label} value={band.value} />
-            ))}
-          </Picker>
-        </View>
-
-        <View style={styles.section}>
-          <Text style={[styles.label, { color: textColor }]}>Sale Amount:</Text>
-          <TextInput
-            style={[styles.input, { backgroundColor: inputBgColor, color: inputTextColor, borderColor }]}
-            keyboardType="numeric"
-            value={saleAmount}
-            onChangeText={setSaleAmount}
-            placeholder="e.g., 25000000"
-            placeholderTextColor={isDarkMode ? '#888' : '#AAA'}
-          />
-          <Text style={[styles.calculatedValue, { color: textColor }]}>
-            90% Financing - Down Payment (10%): {formatCurrency(downPayment)}
-          </Text>
-          <Text style={[styles.calculatedValue, { color: textColor }]}>
-            Amount to Borrow: {formatCurrency(amountToBorrow)}
-          </Text>
-        </View>
-        
-        <View style={styles.toggleContainer}>
-            <TouchableOpacity 
-                style={[styles.toggleButton, includeNHT && styles.toggleButtonActive]}
-                onPress={() => setIncludeNHT(true)}>
-                <Text style={[styles.toggleButtonText, includeNHT && styles.toggleButtonTextActive]}>With NHT</Text>
-            </TouchableOpacity>
-            <TouchableOpacity 
-                style={[styles.toggleButton, !includeNHT && styles.toggleButtonActive]}
-                onPress={() => setIncludeNHT(false)}>
-                <Text style={[styles.toggleButtonText, !includeNHT && styles.toggleButtonTextActive]}>Without NHT</Text>
-            </TouchableOpacity>
-        </View>
-
-        {includeNHT && (
-          <View style={[styles.section, styles.nhtSection]}>
-            <Text style={[styles.sectionTitle, { color: textColor }]}>NHT Contribution</Text>
-
-            <Text style={[styles.infoText, { color: textColor }]}>
-              Max NHT Loan Possible (based on selections): {formatCurrency(nhtMaxLoanPossible)}
-            </Text>
-            <Text style={[styles.infoText, { color: textColor }]}>
-              NHT Interest Rate (from income band): {nhtEffectiveRate.toFixed(2)}%
-            </Text>
-            {nhtMaxLoanPossible === 0 && (applicantType && housingCategory) && (
-              <Text style={[styles.warningText, { color: 'orange' }]}>
-                No specific NHT rule found for the selected Applicant Type and Housing Category combination.
-                Max loan set to 0. Please verify with NHT.
-              </Text>
-            )}
-
-            <Text style={[styles.label, { color: textColor }]}>Desired NHT Loan Amount:</Text>
-            <TextInput
-              style={[styles.input, { backgroundColor: inputBgColor, color: inputTextColor, borderColor }]}
-              keyboardType="numeric"
-              value={nhtLoanAmount}
-              onChangeText={(text) => {
-                const numericValue = parseCurrency(text);
-                if (numericValue > nhtMaxLoanPossible && nhtMaxLoanPossible > 0) {
-                  setNhtLoanAmount(String(nhtMaxLoanPossible));
-                } else {
-                  setNhtLoanAmount(text);
-                }
-              }}
-              placeholder={`Max ${formatCurrency(nhtMaxLoanPossible, false)}`}
-              placeholderTextColor={isDarkMode ? '#888' : '#AAA'}
-            />
-            {parseCurrency(nhtLoanAmount) > nhtMaxLoanPossible && nhtMaxLoanPossible > 0 && (
-              <Text style={styles.warningText}>
-                Desired amount cannot exceed {formatCurrency(nhtMaxLoanPossible)}.
-              </Text>
-            )}
-
-            <Text style={[styles.label, { color: textColor }]}>NHT Interest Rate (%):</Text>
-            <TextInput
-              style={[styles.input, styles.readOnlyInput, { backgroundColor: isDarkMode ? '#424242' : '#E0E0E0', color: inputTextColor, borderColor }]}
-              keyboardType="numeric"
-              value={nhtInterestRateDisplay}
-              editable={false}
-            />
-            <Text style={[styles.metaText, { color: textColor, fontStyle: 'italic' }]}>
-              *Rate determined by income band. Max loan amounts vary by applicant & housing type.
-            </Text>
-
-            <Text style={[styles.label, { color: textColor }]}>NHT Years:</Text>
-            <TextInput
-              style={[styles.input, { backgroundColor: inputBgColor, color: inputTextColor, borderColor }]}
-              keyboardType="numeric"
-              value={nhtYears}
-              onChangeText={setNhtYears}
-              placeholderTextColor={isDarkMode ? '#888' : '#AAA'}
-            />
-            <Text style={[styles.calculatedValue, { color: textColor }]}>
-              NHT Monthly Payment: {formatCurrency(nhtMonthlyPayment)}
-            </Text>
-            <TouchableOpacity
-              style={[styles.amortizationButton, {backgroundColor: isDarkMode ? '#004D40' : '#00796B' }]}
-              onPress={() => openAmortizationModal('NHT')}>
-              <Text style={styles.amortizationButtonText}>View NHT Amortization</Text>
-            </TouchableOpacity>
-          </View>
-        )}
-
-        <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: textColor }]}>Bank Loan</Text>
-           <Text style={[styles.calculatedValue, { color: textColor, fontWeight: 'bold' }]}>
-              Bank Loan Amount: {formatCurrency(bankLoanAmount)}
-            </Text>
-          <Text style={[styles.label, { color: textColor }]}>Bank Interest Rate (%):</Text>
-          <TextInput
-            style={[styles.input, { backgroundColor: inputBgColor, color: inputTextColor, borderColor }]}
-            keyboardType="numeric"
-            value={bankInterestRate}
-            onChangeText={setBankInterestRate}
-            placeholderTextColor={isDarkMode ? '#888' : '#AAA'}
-          />
-          <Text style={[styles.label, { color: textColor }]}>Bank Years:</Text>
-          <TextInput
-            style={[styles.input, { backgroundColor: inputBgColor, color: inputTextColor, borderColor }]}
-            keyboardType="numeric"
-            value={bankYears}
-            onChangeText={setBankYears}
-            placeholderTextColor={isDarkMode ? '#888' : '#AAA'}
-          />
-          <Text style={[styles.calculatedValue, { color: textColor }]}>
-            Bank Monthly Payment: {formatCurrency(bankMonthlyPayment)}
-          </Text>
-          <TouchableOpacity 
-              style={[styles.amortizationButton, {backgroundColor: isDarkMode ? '#004D40' : '#00796B' }]} 
-              onPress={() => openAmortizationModal('Bank')}>
-              <Text style={styles.amortizationButtonText}>View Bank Amortization</Text>
-          </TouchableOpacity>
-        </View>
-
-        <View style={[styles.totalSection, {backgroundColor: isDarkMode ? '#004D40' : '#E0F2F1'}]}>
-          <Text style={[styles.totalLabel, {color: isDarkMode ? '#B2DFDB' : '#00796B'}]}>TOTAL MONTHLY PAYMENTS</Text>
-          <Text style={[styles.totalValue, {color: isDarkMode ? '#FFFFFF' : '#004D40'}]}>{formatCurrency(totalMonthlyPayment)}</Text>
-        </View>
-        
-        <View style={styles.notesSection}>
-            <Text style={[styles.noteTitle, { color: textColor }]}>Important Notes:</Text>
-            <Text style={[styles.noteText, { color: textColor }]}>NHT Loan Limits (Effective 2023):</Text>
-            <Text style={[styles.noteText, { color: textColor }]}>- <Text style={{fontWeight: 'bold'}}>Open Market Purchase:</Text> Single: $9M, Joint: $17M, Three: $23M. <Text style={{fontWeight: 'bold'}}>Special:</Text> Single applicants may access up to $12M if the unit price is $14M or less.</Text>
-            <Text style={[styles.noteText, { color: textColor }]}>- <Text style={{fontWeight: 'bold'}}>Build-On-Own-Land:</Text> Single: $11M, Joint: $17M, Three: $23M.</Text>
-            <Text style={[styles.noteText, { color: textColor }]}>- <Text style={{fontWeight: 'bold'}}>House Lot Loan:</Text> Single: $5M, Joint: $7M, Three: $10.5M.</Text>
-            <Text style={[styles.noteText, { color: textColor }]}>- <Text style={{fontWeight: 'bold'}}>New Housing Developments:</Text> Single: $9M, Joint: $17M, Three: $23M.</Text>
-            <Text style={[styles.noteText, { color: textColor }]}>- <Text style={{fontWeight: 'bold'}}>Existing House (≤ $12M):</Text> Single: $8.5M, Joint: $17M, Three: $25.5M.</Text>
-            <Text style={[styles.noteText, { color: textColor }]}>- <Text style={{fontWeight: 'bold'}}>Existing House ( $12M) / Other:</Text> Single: $5.5M, Joint: $11M, Three: $16.5M.</Text>
-            <Text style={[styles.noteText, { color: textColor }]}>- NHT interest rates are based on income band. See nht.gov.jm for details.</Text>
-            <Text style={[styles.noteText, { color: textColor }]}>- For Bank Loan: Interest rates, down payment, and terms may vary. Confirm with your mortgage provider.</Text>
-            <TouchableOpacity onPress={() => Linking.openURL('https://www.nht.gov.jm/loans/affordability')}>
-                <Text style={styles.link}>Visit nht.gov.jm for updated NHT info</Text>
-            </TouchableOpacity>
-            <Text style={[styles.disclaimer, { color: textColor }]}>** THIS DOES NOT INCLUDE FEES OR INSURANCE ASSOCIATED WITH A MORTGAGE. **</Text>
-        </View>
-
-        <View style={styles.footer}>
-          <Text style={[styles.footerText, { color: textColor }]}>Contact: financialcentsibility@gmail.com</Text>
-          <Text style={[styles.footerText, { color: textColor }]}>Twitter: @MsGillyJ</Text>
-          <TouchableOpacity onPress={() => Linking.openURL('https://jis.gov.jm/media/2023/03/FINAL-PMS-SPEECH.pdf')}>
-            <Text style={styles.link}>Reference: JIS PM Speech PDF</Text>
-          </TouchableOpacity>
-        </View>
-
-        <AmortizationModal
-          visible={isAmortizationModalVisible}
-          onClose={closeAmortizationModal}
-          loanDetails={currentAmortizationDetails}
-        />
-
-      </ScrollView>
-    </SafeAreaView>
-  );
+    return {
+        // State values
+        applicantType, incomeBand, housingCategory, saleAmount, includeNHT, nhtLoanAmount, nhtYears, bankInterestRate, bankYears,
+        nhtMaxLoanPossible, nhtEffectiveRate, downPayment, amountToBorrow, nhtMonthlyPayment, bankLoanAmount, bankMonthlyPayment, totalMonthlyPayment,
+        // Setter functions
+        setApplicantType, setIncomeBand, setHousingCategory, setSaleAmount, setIncludeNHT, setNhtLoanAmount, setNhtYears, setBankInterestRate, setBankYears
+    };
 };
 
-// --- Styles ---
-const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-  },
-  container: {
-    padding: 20,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    textAlign: 'center',
-    marginBottom: 5,
-  },
-  subtitle: {
-    fontSize: 16,
-    textAlign: 'center',
-    marginBottom: 5,
-  },
-  link: {
-    color: '#1E90FF', // DodgerBlue
-    textAlign: 'center',
-    marginVertical: 5,
-    textDecorationLine: 'underline',
-  },
-  metaText: {
-    fontSize: 12,
-    textAlign: 'center',
-    marginBottom: 15,
-    color: '#555',
-  },
-  section: {
-    marginBottom: 20,
-    padding: 15,
-    borderRadius: 8,
-    backgroundColor: 'rgba(128, 128, 128, 0.1)', // Light grey with transparency
-  },
-  nhtSection: {
-    borderColor: '#00796B', // Teal
-    borderWidth: 1,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 10,
-  },
-  label: {
-    fontSize: 16,
-    marginBottom: 5,
-    marginTop: 10,
-  },
-  input: {
-    height: 45,
-    borderWidth: 1,
-    paddingHorizontal: 10,
-    borderRadius: 5,
-    fontSize: 16,
-    marginBottom: 10,
-  },
-  picker: {
-    height: Platform.OS === 'ios' ? 180 : 50, // iOS picker needs more height for wheel
-    width: '100%',
-    justifyContent: 'center', // For Android to center text
-    borderWidth: Platform.OS === 'android' ? 1 : 0,
-    borderColor: Platform.OS === 'android' ? '#CCCCCC' : 'transparent',
-    borderRadius: Platform.OS === 'android' ? 5 : 0,
-  },
-  calculatedValue: {
-    fontSize: 16,
-    marginTop: 5,
-    fontStyle: 'italic',
-  },
-  toggleContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    marginBottom: 20,
-  },
-  toggleButton: {
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: '#00796B', // Teal
-  },
-  toggleButtonActive: {
-    backgroundColor: '#00796B', // Teal
-  },
-  toggleButtonText: {
-    color: '#00796B',
-    fontWeight: 'bold',
-  },
-  toggleButtonTextActive: {
-    color: '#FFFFFF',
-  },
-  totalSection: {
-    padding: 20,
-    borderRadius: 8,
-    alignItems: 'center',
-    marginVertical: 20,
-  },
-  totalLabel: {
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-  totalValue: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    marginTop: 5,
-  },
-  notesSection: {
-      marginTop: 15,
-      padding: 10,
-      backgroundColor: 'rgba(128,128,128,0.05)',
-      borderRadius: 8,
-  },
-  noteTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginBottom: 8,
-  },
-  noteText: {
-    fontSize: 14,
-    marginBottom: 8,
-    lineHeight: 20,
-  },
-  disclaimer: {
-      fontSize: 14,
-      fontWeight: 'bold',
-      color: '#D32F2F', // Red
-      marginTop: 10,
-      textAlign: 'center',
-  },
-  footer: {
-    marginTop: 30,
-    alignItems: 'center',
-    borderTopWidth: 1,
-    borderTopColor: '#DDDDDD',
-    paddingTop: 15,
-  },
-  footerText: {
-    fontSize: 12,
-    color: '#555',
-    marginBottom: 3,
-  },
-  amortizationButton: {
-    paddingVertical: 10,
-    paddingHorizontal: 15,
-    borderRadius: 5,
-    alignItems: 'center',
-    marginTop: 15,
-  },
-  amortizationButtonText: {
-    color: '#FFFFFF',
-    fontWeight: 'bold',
-    fontSize: 14,
-  },
-  infoText: {
-    fontSize: 14,
-    fontStyle: 'italic',
-    marginBottom: 5,
-  },
-  warningText: {
-    fontSize: 12,
-    color: 'red',
-    marginBottom: 5,
-  },
-  readOnlyInput: {
-    opacity: 0.8,
-  },
-});
+// --- Dynamic Styles ---
+const getDynamicStyles = (isDarkMode) => {
+    const C = theme.COLORS;
+    const S = theme.SPACING;
+    const F = theme.FONT_SIZES;
+    const mode = isDarkMode ? 'dark' : 'light';
+
+    return StyleSheet.create({
+        safeArea: { flex: 1, backgroundColor: C.background[mode] },
+        container: { padding: S.medium },
+        title: { fontSize: F.title, fontWeight: 'bold', textAlign: 'center', marginBottom: S.large, color: C.text[mode] },
+        
+        // Results
+        resultsContainer: { backgroundColor: C.primary, borderRadius: 12, padding: S.medium, marginBottom: S.large, alignItems: 'center' },
+        resultsLabel: { color: C.primaryLight, fontSize: F.body, textTransform: 'uppercase' },
+        resultsValue: { color: C.white, fontSize: 36, fontWeight: 'bold', marginVertical: S.small },
+        resultsBreakdown: { flexDirection: 'row', justifyContent: 'center', gap: S.medium },
+        resultsBreakdownText: { color: C.white, fontSize: F.body },
+        
+        // Cards
+        card: { backgroundColor: C.card[mode], borderRadius: 12, padding: S.medium, marginBottom: S.medium, borderWidth: 1, borderColor: C.border[mode] },
+        cardTitle: { fontSize: F.subtitle, fontWeight: 'bold', marginBottom: S.medium, color: C.text[mode] },
+        
+        // Forms
+        formGroup: { marginBottom: S.medium },
+        label: { fontSize: F.body, color: C.textSecondary[mode], marginBottom: S.small },
+        input: { backgroundColor: C.inputBg[mode], color: C.text[mode], borderWidth: 1, borderColor: C.border[mode], borderRadius: 8, padding: 12, fontSize: F.body },
+        readOnlyInput: { opacity: 0.7 },
+        pickerContainer: { borderWidth: 1, borderColor: C.border[mode], borderRadius: 8, overflow: 'hidden' }, // For Android border
+        picker: { backgroundColor: C.inputBg[mode], color: C.text[mode], height: Platform.OS === 'ios' ? 120 : 50, justifyContent: 'center' },
+        pickerItem: { color: C.text[mode] }, // For iOS picker wheel text
+        
+        // Toggle Buttons
+        toggleContainer: { flexDirection: 'row', marginBottom: S.medium, backgroundColor: C.inputBg[mode], borderRadius: 20, padding: 4 },
+        toggleButton: { flex: 1, paddingVertical: 10, borderRadius: 16, alignItems: 'center' },
+        toggleButtonActive: { backgroundColor: C.primary },
+        toggleButtonText: { color: C.text[mode], fontWeight: 'bold' },
+        toggleButtonTextActive: { color: C.white },
+
+        // Info & Notes
+        infoText: { fontSize: F.body, color: C.textSecondary[mode], fontStyle: 'italic', marginBottom: S.small },
+        infoTextBold: { fontSize: F.body, color: C.text[mode], fontWeight: 'bold', marginBottom: S.small },
+        infoHighlight: { fontSize: 14, color: C.primary, fontWeight: '600', marginBottom: S.small },
+        warningText: { color: C.warning, fontSize: F.caption, marginTop: 4 },
+        noteText: { fontSize: 14, color: C.textSecondary[mode], lineHeight: 20, marginBottom: S.medium },
+        link: { color: C.link, textDecorationLine: 'underline', textAlign: 'center', paddingVertical: S.small },
+
+        // Amortization Button
+        amortizationButton: { backgroundColor: C.primary, paddingVertical: 12, borderRadius: 8, alignItems: 'center', marginTop: S.small },
+        amortizationButtonText: { color: C.white, fontWeight: 'bold', fontSize: F.body },
+    });
+};
+
+// --- Reusable UI Components ---
+const SectionCard = ({ title, children, style, styles }) => (
+    <View style={[styles.card, style]}>
+        <Text style={styles.cardTitle}>{title}</Text>
+        {children}
+    </View>
+);
+
+const FormInput = ({ label, value, onChangeText, keyboardType = 'numeric', placeholder, editable = true, onBlur, styles }) => (
+    <View style={styles.formGroup}>
+        <Text style={styles.label}>{label}</Text>
+        <TextInput
+            style={[styles.input, !editable && styles.readOnlyInput]}
+            value={String(value)}
+            onChangeText={onChangeText}
+            keyboardType={keyboardType}
+            placeholder={placeholder}
+            placeholderTextColor={theme.COLORS.textSecondary.dark}
+            editable={editable}
+            onBlur={onBlur}
+        />
+    </View>
+);
+
+const FormPicker = ({ label, selectedValue, onValueChange, items, styles }) => (
+    <View style={styles.formGroup}>
+        <Text style={styles.label}>{label}</Text>
+        <View style={styles.pickerContainer}>
+            <Picker selectedValue={selectedValue} onValueChange={onValueChange} style={styles.picker} itemStyle={styles.pickerItem}>
+                {items.map(item => <Picker.Item key={item.value} label={item.label} value={item.value} />)}
+            </Picker>
+        </View>
+    </View>
+);
+
+const ResultsDisplay = ({ total, nhtPayment, bankPayment, includeNHT, styles }) => (
+    <View style={styles.resultsContainer}>
+        <Text style={styles.resultsLabel}>Total Monthly Payment</Text>
+        <Text style={styles.resultsValue}>{formatCurrency(total)}</Text>
+        <View style={styles.resultsBreakdown}>
+            {includeNHT && <Text style={styles.resultsBreakdownText}>NHT: {formatCurrency(nhtPayment)}</Text>}
+            <Text style={styles.resultsBreakdownText}>Bank: {formatCurrency(bankPayment)}</Text>
+        </View>
+    </View>
+);
+
+const ToggleButton = ({ options, selectedValue, onSelect, styles }) => (
+  <View style={styles.toggleContainer}>
+    {options.map(option => (
+      <TouchableOpacity
+        key={option.value}
+        style={[
+          styles.toggleButton,
+          selectedValue === option.value && styles.toggleButtonActive,
+        ]}
+        onPress={() => onSelect(option.value)}
+      >
+        <Text
+          style={[
+            styles.toggleButtonText,
+            selectedValue === option.value && styles.toggleButtonTextActive,
+          ]}
+        >
+          {option.label}
+        </Text>
+      </TouchableOpacity>
+    ))}
+  </View>
+);
+
+
+// --- Main Screen Component ---
+const MortgageCalculatorScreen = () => {
+    const {
+        applicantType, setApplicantType, incomeBand, setIncomeBand, housingCategory, setHousingCategory, saleAmount, setSaleAmount,
+        includeNHT, setIncludeNHT, nhtLoanAmount, setNhtLoanAmount, nhtYears, setNhtYears, bankInterestRate, setBankInterestRate, bankYears, setBankYears,
+        nhtMaxLoanPossible, nhtEffectiveRate, downPayment, amountToBorrow, nhtMonthlyPayment, bankLoanAmount, bankMonthlyPayment, totalMonthlyPayment
+    } = useMortgageCalculator();
+    
+    const [isAmortizationModalVisible, setAmortizationModalVisible] = useState(false);
+    const [currentAmortizationDetails, setCurrentAmortizationDetails] = useState(null);
+
+    const openAmortizationModal = (type) => {
+        let details = null;
+        if (type === 'NHT' && includeNHT) {
+            const principal = Math.min(parseCurrency(nhtLoanAmount), nhtMaxLoanPossible);
+            if (principal > 0 && nhtMonthlyPayment > 0) {
+                details = { loanName: 'NHT Loan', principal, annualRate: nhtEffectiveRate, years: parseInt(nhtYears), monthlyPayment: nhtMonthlyPayment };
+            }
+        } else if (type === 'Bank') {
+            if (bankLoanAmount > 0 && bankMonthlyPayment > 0) {
+                details = { loanName: 'Bank Loan', principal: bankLoanAmount, annualRate: parseFloat(bankInterestRate), years: parseInt(bankYears), monthlyPayment: bankMonthlyPayment };
+            }
+        }
+        
+        if (details) {
+            setCurrentAmortizationDetails(details);
+            setAmortizationModalVisible(true);
+        } else {
+            alert("Loan details are incomplete or invalid for an amortization schedule.");
+        }
+    };
+    
+    const isDarkMode = Appearance.getColorScheme() === 'dark';
+    const styles = getDynamicStyles(isDarkMode); // Generate styles based on theme
+
+    return (
+        <SafeAreaView style={styles.safeArea}>
+            <ScrollView contentContainerStyle={styles.container}>
+                <Text style={styles.title}>Mortgage Calculator</Text>
+
+                <ResultsDisplay
+                    total={totalMonthlyPayment}
+                    nhtPayment={nhtMonthlyPayment}
+                    bankPayment={bankMonthlyPayment}
+                    includeNHT={includeNHT}
+                    styles={styles}
+                />
+
+                <SectionCard title="Loan Details" styles={styles}>
+                    <FormInput
+                        label="Sale Amount ($)"
+                        value={saleAmount}
+                        onChangeText={setSaleAmount}
+                        placeholder="e.g., 25000000"
+                        styles={styles}
+                    />
+                    <Text style={styles.infoText}>Down Payment (10%): {formatCurrency(downPayment)}</Text>
+                    <Text style={styles.infoText}>Total Amount to Borrow: {formatCurrency(amountToBorrow)}</Text>
+
+                    <FormPicker label="Applicant Type" selectedValue={applicantType} onValueChange={setApplicantType} items={applicantTypes} styles={styles} />
+                    <FormPicker label="Housing Category" selectedValue={housingCategory} onValueChange={setHousingCategory} items={housingCategories} styles={styles} />
+                    <FormPicker label="Weekly Income Band" selectedValue={incomeBand} onValueChange={setIncomeBand} items={incomeBandsData} styles={styles} />
+                </SectionCard>
+                
+                <ToggleButton 
+                    options={[{label: 'With NHT', value: true}, {label: 'Without NHT', value: false}]}
+                    selectedValue={includeNHT}
+                    onSelect={setIncludeNHT}
+                    styles={styles}
+                />
+
+                {includeNHT && (
+                    <SectionCard title="NHT Contribution" styles={styles}>
+                        <Text style={styles.infoHighlight}>Max Possible Loan: {formatCurrency(nhtMaxLoanPossible)}</Text>
+                        <Text style={styles.infoHighlight}>Interest Rate: {nhtEffectiveRate.toFixed(2)}%</Text>
+                        
+                        <FormInput
+                            label="Desired NHT Loan Amount ($)"
+                            value={nhtLoanAmount}
+                            onChangeText={setNhtLoanAmount}
+                            onBlur={() => { // Auto-correct if value exceeds max
+                                const numericValue = parseCurrency(nhtLoanAmount);
+                                if (numericValue > nhtMaxLoanPossible && nhtMaxLoanPossible > 0) {
+                                    setNhtLoanAmount(String(nhtMaxLoanPossible));
+                                }
+                            }}
+                            styles={styles}
+                        />
+                        {parseCurrency(nhtLoanAmount) > nhtMaxLoanPossible && nhtMaxLoanPossible > 0 && (
+                          <Text style={styles.warningText}>
+                            Amount cannot exceed {formatCurrency(nhtMaxLoanPossible)}.
+                          </Text>
+                        )}
+                        <FormInput label="Loan Term (Years)" value={nhtYears} onChangeText={setNhtYears} styles={styles} />
+                         <TouchableOpacity style={styles.amortizationButton} onPress={() => openAmortizationModal('NHT')}>
+                            <Text style={styles.amortizationButtonText}>View NHT Amortization</Text>
+                        </TouchableOpacity>
+                    </SectionCard>
+                )}
+
+                <SectionCard title="Bank Loan" styles={styles}>
+                    <Text style={styles.infoTextBold}>Bank Loan Amount: {formatCurrency(bankLoanAmount)}</Text>
+                    <FormInput label="Interest Rate (%)" value={bankInterestRate} onChangeText={setBankInterestRate} styles={styles} />
+                    <FormInput label="Loan Term (Years)" value={bankYears} onChangeText={setBankYears} styles={styles} />
+                    <TouchableOpacity style={styles.amortizationButton} onPress={() => openAmortizationModal('Bank')}>
+                        <Text style={styles.amortizationButtonText}>View Bank Amortization</Text>
+                    </TouchableOpacity>
+                </SectionCard>
+                
+                <SectionCard title="Important Notes" styles={styles}>
+                    <Text style={styles.noteText}>• Loan limits and interest rates are based on NHT's 2023 policies. Always verify with the NHT and your bank for the most current information.</Text>
+                    <Text style={styles.noteText}>• This calculation does not include closing costs, insurance, or other fees.</Text>
+                     <TouchableOpacity onPress={() => Linking.openURL('https://www.nht.gov.jm/loans/affordability')}>
+                        <Text style={styles.link}>Visit nht.gov.jm for Official Info</Text>
+                    </TouchableOpacity>
+                </SectionCard>
+
+                <AmortizationModal
+                    visible={isAmortizationModalVisible}
+                    onClose={() => setAmortizationModalVisible(false)}
+                    loanDetails={currentAmortizationDetails}
+                />
+            </ScrollView>
+        </SafeAreaView>
+    );
+};
 
 export default MortgageCalculatorScreen;

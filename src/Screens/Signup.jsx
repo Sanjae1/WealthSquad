@@ -1,14 +1,38 @@
-import { View, Text, ScrollView, TouchableOpacity, TextInput, Image, Alert, KeyboardAvoidingView, Platform, Keyboard } from 'react-native';
+import React, { useState } from 'react';
+import { 
+  View, 
+  Text, 
+  ScrollView, 
+  TouchableOpacity, 
+  TextInput, 
+  Image, 
+  Alert, 
+  KeyboardAvoidingView, 
+  Platform, 
+  StyleSheet,
+  ActivityIndicator,
+  Keyboard
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import React, { useState, useRef } from 'react';
-import { MyColours } from '../Utils/MyColours';
+import { MyColours } from '../Utils/MyColours'; // Assuming your colors are defined here
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { supabase } from '../../supabaseClient';
 
+// A helper component for our styled form fields
+const FormField = ({ label, icon, error, children, isFocused }) => (
+  <View style={styles.fieldContainer}>
+    <Text style={styles.label}>{label}</Text>
+    <View style={[styles.inputContainer, isFocused && styles.inputContainerFocused, error && styles.inputContainerError]}>
+      <Ionicons name={icon} size={20} color={MyColours.grey} style={styles.inputIcon} />
+      {children}
+    </View>
+    {error && <Text style={styles.errorText}>{error}</Text>}
+  </View>
+);
+
 const Signup = () => {
   const nav = useNavigation();
-  const scrollViewRef = useRef(null);
   const [signupCredentials, setSignupCredentials] = useState({
     firstName: "",
     lastName: "",
@@ -16,66 +40,38 @@ const Signup = () => {
     password: "",
     confirmPassword: ""
   });
-  const [isVisible, setIsVisible] = useState(true);
+  const [focusedField, setFocusedField] = useState(null);
+  const [isPasswordVisible, setIsPasswordVisible] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [errors, setErrors] = useState({});
 
   const { firstName, lastName, email, password, confirmPassword } = signupCredentials;
 
-  const handleFocus = (yPosition) => {
-    if (scrollViewRef.current) {
-      scrollViewRef.current.scrollTo({
-        y: yPosition,
-        animated: true
-      });
+  const handleInputChange = (field, value) => {
+    setSignupCredentials({ ...signupCredentials, [field]: value });
+    // Clear error for the field being edited
+    if (errors[field]) {
+      setErrors({ ...errors, [field]: null });
     }
   };
 
   const validateInputs = () => {
-    if (!firstName || !lastName || !email || !password || !confirmPassword) {
-      Alert.alert('Error', 'Please fill in all fields');
-      return false;
-    }
-
-    if (password !== confirmPassword) {
-      Alert.alert('Error', 'Passwords do not match');
-      return false;
-    }
-
+    const newErrors = {};
+    if (!firstName.trim()) newErrors.firstName = 'First name is required.';
+    if (!lastName.trim()) newErrors.lastName = 'Last name is required.';
+    
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      Alert.alert('Error', 'Please enter a valid email address');
-      return false;
-    }
+    if (!email.trim()) newErrors.email = 'Email is required.';
+    else if (!emailRegex.test(email)) newErrors.email = 'Please enter a valid email address.';
+    
+    if (!password) newErrors.password = 'Password is required.';
+    else if (password.length < 6) newErrors.password = 'Password must be at least 6 characters long.';
+    
+    if (!confirmPassword) newErrors.confirmPassword = 'Please confirm your password.';
+    else if (password !== confirmPassword) newErrors.confirmPassword = 'Passwords do not match.';
 
-    if (password.length < 6) {
-      Alert.alert('Error', 'Password must be at least 6 characters long');
-      return false;
-    }
-
-    return true;
-  };
-
-  const insertUserData = async (userId) => {
-    try {
-      const { data, error } = await supabase
-        .from('Users')
-        .insert([
-          { 
-            user_id: userId,
-            email: email,
-            first_name: firstName,
-            last_name: lastName,
-            created_at: new Date().toISOString(),
-            // Add any additional user data fields you need
-          }
-        ]);
-
-      if (error) throw error;
-      return data;
-    } catch (error) {
-      console.error('Error inserting user data:', error);
-      throw error;
-    }
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
   };
 
   const signUpUser = async () => {
@@ -91,167 +87,289 @@ const Signup = () => {
           data: {
             first_name: firstName,
             last_name: lastName,
-            signed_up_at: new Date().toISOString(),
           }
         }
       });
 
-      if (error) {
-        // Handle specific error cases
-        if (error.message.includes('not authorized')) {
-          Alert.alert(
-            'Error',
-            'Email signup is not enabled. Please contact support.'
-          );
-        } else if (error.message.includes('already registered')) {
-          Alert.alert(
-            'Error',
-            'This email is already registered. Please try logging in.'
-          );
-        } else {
-          Alert.alert('Error', error.message);
-        }
-        console.error('Signup error:', error.message);
-        return;
-      }
+      if (error) throw error;
   
       if (data?.user) {
-        try {
-          await insertUserData(data.user.id);
-          Alert.alert(
-            'Success',
-            'Registration successful! Please check your email for verification.',
-            [{ text: 'OK', onPress: () => nav.navigate('Login') }]
-          );
-        } catch (dbError) {
-          console.error('Database error:', dbError);
-          Alert.alert(
-            'Warning',
-            'Account created but there was an error saving additional data.'
-          );
-        }
+        // The insert to a public 'Users' table is often handled by a DB trigger
+        // for security and reliability. If you need to do it manually, this is the place.
+        Alert.alert(
+          'Success!',
+          'Please check your email for a verification link to complete your registration.',
+          [{ text: 'OK', onPress: () => nav.navigate('Login') }]
+        );
+      } else {
+        Alert.alert('Registration pending', 'Please check your email to verify your account.');
       }
     } catch (error) {
-      Alert.alert('Error', 'An unexpected error occurred. Please try again.');
-      console.error('Unexpected error:', error);
+      Alert.alert('Registration Error', error.message || 'An unexpected error occurred.');
+      console.error('Signup error:', error);
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: MyColours.secondary }}>
+    <SafeAreaView style={styles.container}>
       <KeyboardAvoidingView 
         behavior={Platform.OS === "ios" ? "padding" : "height"}
-        style={{ flex: 1 }}
-        keyboardVerticalOffset={Platform.OS === "ios" ? 100 : 20}
+        style={styles.flexOne}
       >
         <ScrollView 
-          ref={scrollViewRef}
-          style={{ flex: 1, paddingTop: 20 }}
+          style={styles.flexOne}
+          contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ paddingBottom: 40 }}
         >
-          <Image style={{ alignSelf: "center", width: 2, aspectRatio: 140, height: 140, resizeMode:'contain' }} source={require("../assets/FreshStart_LOGO.png")} />
-          <View style={{ paddingHorizontal: 20, marginTop: 1 }}>
-            <Text style={{ color: MyColours.third, fontSize: 24, fontWeight: "500" }}>Sign Up</Text>
-            <Text style={{ fontSize: 16, fontWeight: "400", color: 'grey', marginTop: 15, marginBottom: 10 }}>
-              Enter your details to create an account
+          <View style={styles.header}>
+            <Image 
+              style={styles.logo} 
+              source={require("../assets/FreshStart_LOGO.png")} 
+            />
+            <Text style={styles.title}>Create Your Account</Text>
+            <Text style={styles.subtitle}>
+              Join us to get started
             </Text>
-
-            {/* First Name Field */}
-            <Text style={{ fontSize: 16, fontWeight: "500", color: "grey", marginTop: 20 }}>First Name</Text>
-            <TextInput
-              value={firstName}
-              onChangeText={(val) => setSignupCredentials({ ...signupCredentials, firstName: val })}
-              autoCapitalize="words"
-              style={{ borderColor: '#E3E3E3', borderBottomWidth: 2, fontSize: 16, marginTop: 10, paddingBottom: 8 }}
-              onFocus={() => handleFocus(150)}
-            />
-
-            {/* Last Name Field */}
-            <Text style={{ fontSize: 16, fontWeight: "500", color: "grey", marginTop: 20 }}>Last Name</Text>
-            <TextInput
-              value={lastName}
-              onChangeText={(val) => setSignupCredentials({ ...signupCredentials, lastName: val })}
-              autoCapitalize="words"
-              style={{ borderColor: '#E3E3E3', borderBottomWidth: 2, fontSize: 16, marginTop: 10, paddingBottom: 8 }}
-              onFocus={() => handleFocus(230)}
-            />
+          </View>
+          
+          <View style={styles.form}>
+            {/* First & Last Name Fields */}
+            <View style={styles.row}>
+              <View style={styles.flexOne}>
+                 <FormField label="First Name" icon="person-outline" error={errors.firstName} isFocused={focusedField === 'firstName'}>
+                    <TextInput
+                      value={firstName}
+                      onChangeText={(val) => handleInputChange('firstName', val)}
+                      placeholder="John"
+                      placeholderTextColor={MyColours.grey}
+                      autoCapitalize="words"
+                      style={styles.input}
+                      onFocus={() => setFocusedField('firstName')}
+                      onBlur={() => setFocusedField(null)}
+                    />
+                 </FormField>
+              </View>
+              <View style={styles.flexOne}>
+                 <FormField label="Last Name" icon="person-outline" error={errors.lastName} isFocused={focusedField === 'lastName'}>
+                    <TextInput
+                      value={lastName}
+                      onChangeText={(val) => handleInputChange('lastName', val)}
+                      placeholder="Doe"
+                      placeholderTextColor={MyColours.grey}
+                      autoCapitalize="words"
+                      style={styles.input}
+                      onFocus={() => setFocusedField('lastName')}
+                      onBlur={() => setFocusedField(null)}
+                    />
+                 </FormField>
+              </View>
+            </View>
 
             {/* Email Field */}
-            <Text style={{ fontSize: 16, fontWeight: "500", color: "grey", marginTop: 20 }}>Email</Text>
-            <TextInput
-              value={email}
-              onChangeText={(val) => setSignupCredentials({ ...signupCredentials, email: val })}
-              keyboardType="email-address"
-              autoCapitalize="none"
-              style={{ borderColor: '#E3E3E3', borderBottomWidth: 2, fontSize: 16, marginTop: 10, paddingBottom: 8 }}
-              onFocus={() => handleFocus(310)}
-            />
+            <FormField label="Email" icon="mail-outline" error={errors.email} isFocused={focusedField === 'email'}>
+              <TextInput
+                value={email}
+                onChangeText={(val) => handleInputChange('email', val)}
+                placeholder="you@example.com"
+                placeholderTextColor={MyColours.grey}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                style={styles.input}
+                onFocus={() => setFocusedField('email')}
+                onBlur={() => setFocusedField(null)}
+              />
+            </FormField>
 
             {/* Password Field */}
-            <Text style={{ fontSize: 16, fontWeight: "500", color: "grey", marginTop: 20 }}>Password</Text>
-            <View style={{ borderColor: '#E3E3E3', borderBottomWidth: 2, flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+            <FormField label="Password" icon="lock-closed-outline" error={errors.password} isFocused={focusedField === 'password'}>
               <TextInput
                 value={password}
-                onChangeText={(val) => setSignupCredentials({ ...signupCredentials, password: val })}
-                secureTextEntry={isVisible}
-                maxLength={13}
-                keyboardType="ascii-capable"
-                style={{ flex: 0.9, fontSize: 17, marginTop: 10, paddingBottom: 8 }}
-                onFocus={() => handleFocus(390)}
+                onChangeText={(val) => handleInputChange('password', val)}
+                placeholder="Min. 6 characters"
+                placeholderTextColor={MyColours.grey}
+                secureTextEntry={!isPasswordVisible}
+                style={styles.input}
+                onFocus={() => setFocusedField('password')}
+                onBlur={() => setFocusedField(null)}
               />
-              <Ionicons
-                onPress={() => setIsVisible(!isVisible)}
-                name={isVisible ? "eye-off-outline" : 'eye-outline'}
-                size={24}
-                color="black"
-              />
-            </View>
+              <TouchableOpacity onPress={() => setIsPasswordVisible(!isPasswordVisible)} style={styles.eyeIcon}>
+                <Ionicons
+                  name={isPasswordVisible ? "eye-off-outline" : 'eye-outline'}
+                  size={24}
+                  color={MyColours.grey}
+                />
+              </TouchableOpacity>
+            </FormField>
 
             {/* Confirm Password Field */}
-            <Text style={{ fontSize: 16, fontWeight: "500", color: "grey", marginTop: 20 }}>Confirm Password</Text>
-            <View style={{ borderColor: '#E3E3E3', borderBottomWidth: 2, flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-              <TextInput
-                value={confirmPassword}
-                onChangeText={(val) => setSignupCredentials({ ...signupCredentials, confirmPassword: val })}
-                secureTextEntry={isVisible}
-                maxLength={13}
-                keyboardType="ascii-capable"
-                style={{ flex: 0.9, fontSize: 17, marginTop: 10, paddingBottom: 8 }}
-                onFocus={() => handleFocus(470)}
-              />
-            </View>
-
+            <FormField label="Confirm Password" icon="lock-closed-outline" error={errors.confirmPassword} isFocused={focusedField === 'confirmPassword'}>
+                <TextInput
+                  value={confirmPassword}
+                  onChangeText={(val) => handleInputChange('confirmPassword', val)}
+                  placeholder="Re-enter password"
+                  placeholderTextColor={MyColours.grey}
+                  secureTextEntry={!isPasswordVisible}
+                  style={styles.input}
+                  onFocus={() => setFocusedField('confirmPassword')}
+                  onBlur={() => setFocusedField(null)}
+                />
+            </FormField>
+            
             <TouchableOpacity 
               onPress={signUpUser}
               disabled={isLoading}
-              style={{ 
-                backgroundColor: isLoading ? MyColours.grey : MyColours.primary,
-                marginTop: 30,
-                height: 60,
-                borderRadius: 60,
-                justifyContent: 'center',
-                alignItems: 'center'
-              }}
+              style={[styles.button, isLoading && styles.buttonDisabled]}
             >
-              <Text style={{ fontSize: 20, color: MyColours.secondary }}>
-                {isLoading ? 'Creating Account...' : 'Sign Up'}
-              </Text>
+              {isLoading ? (
+                <ActivityIndicator size="small" color={MyColours.secondary} />
+              ) : (
+                <Text style={styles.buttonText}>Sign Up</Text>
+              )}
             </TouchableOpacity>
-
-            <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginTop: 20, marginBottom: 10 }}>
-              <Text style={{ fontSize: 16 }}>Already have an account?</Text>
-              <TouchableOpacity onPress={() => nav.navigate('Login')}>
-                <Text style={{ fontSize: 16, color: MyColours.primary, fontWeight: "600" }}> Login</Text>
-              </TouchableOpacity>
-            </View>
+          </View>
+          
+          <View style={styles.footer}>
+            <Text style={styles.footerText}>Already have an account?</Text>
+            <TouchableOpacity onPress={() => nav.navigate('Login')}>
+              <Text style={styles.footerLink}> Login</Text>
+            </TouchableOpacity>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
 };
+
+// Define your color palette if not already done in MyColours
+MyColours.primary = MyColours.primary || '#4A90E2';
+MyColours.secondary = MyColours.secondary || '#FFFFFF';
+MyColours.third = MyColours.third || '#000000';
+MyColours.grey = MyColours.grey || '#A9A9A9';
+MyColours.lightGrey = MyColours.lightGrey || '#F0F0F0';
+MyColours.error = MyColours.error || '#D0021B';
+
+const styles = StyleSheet.create({
+  flexOne: { flex: 1 },
+  container: { 
+    flex: 1, 
+    backgroundColor: MyColours.secondary,
+  },
+  scrollContent: {
+    paddingHorizontal: 25,
+    paddingVertical: 20,
+    flexGrow: 1,
+    justifyContent: 'center',
+  },
+  header: {
+    alignItems: 'center',
+    marginBottom: 30,
+  },
+  logo: {
+    width: 100,
+    height: 100,
+    resizeMode: 'contain',
+    marginBottom: 20,
+  },
+  title: {
+    fontSize: 28,
+    fontWeight: '700',
+    color: MyColours.third,
+    marginBottom: 8,
+  },
+  subtitle: {
+    fontSize: 16,
+    color: MyColours.grey,
+  },
+  form: {
+    width: '100%',
+    gap: 15,
+  },
+  fieldContainer: {
+    marginBottom: 5,
+  },
+  label: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: MyColours.grey,
+    marginBottom: 8,
+    marginLeft: 5,
+  },
+  inputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: MyColours.lightGrey,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'transparent',
+    paddingHorizontal: 15,
+  },
+  inputContainerFocused: {
+    borderColor: MyColours.primary,
+    backgroundColor: MyColours.secondary,
+  },
+  inputContainerError: {
+    borderColor: MyColours.error,
+  },
+  inputIcon: {
+    marginRight: 10,
+  },
+  input: {
+    flex: 1,
+    height: 55,
+    fontSize: 16,
+    color: MyColours.third,
+  },
+  eyeIcon: {
+    padding: 5,
+  },
+  errorText: {
+    color: MyColours.error,
+    fontSize: 12,
+    marginTop: 5,
+    marginLeft: 5,
+  },
+  row: {
+    flexDirection: 'row',
+    gap: 15,
+  },
+  button: {
+    backgroundColor: MyColours.primary,
+    height: 55,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 20,
+    elevation: 3, // Android shadow
+    shadowColor: '#000', // iOS shadow
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  buttonDisabled: {
+    backgroundColor: MyColours.grey,
+  },
+  buttonText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: MyColours.secondary,
+  },
+  footer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 30,
+  },
+  footerText: {
+    fontSize: 15,
+    color: MyColours.grey,
+  },
+  footerLink: {
+    fontSize: 15,
+    color: MyColours.primary,
+    fontWeight: '600',
+  },
+});
 
 export default Signup;
