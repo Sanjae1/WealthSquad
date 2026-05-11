@@ -1,7 +1,7 @@
 // src/components/RecentTransactions.js
 import React, { useEffect, useState } from 'react';
 import { View, Text, ActivityIndicator, StyleSheet, FlatList } from 'react-native';
-import { supabase } from '../../supabaseClient';
+import { supabase } from '../Services/supabaseClient';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 
 const RecentTransactions = () => {

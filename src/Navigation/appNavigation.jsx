@@ -15,8 +15,8 @@ import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityI
 // Main Tab Screens
 import Home from '../Screens/Home';
 import AccountTransactionsScreen from '../Screens/AccountTransactionsScreen';
-import Calculators from '../Components/Calculators';
-import transactionsScreen from '../Components/transactionScreen';
+import Calculators from '../Screens/Calculators';
+import transactionsScreen from '../Screens/TransactionsScreen';
 import BudgetPlanner from '../Screens/BudgetPlanner';
 import Settings from '../Screens/Settings.jsx';
 import FinanceTips from '../Screens/FinanceTips';
@@ -29,7 +29,7 @@ import CarLoanCalculator from '../Screens/CarLoanCalculator';
 import GroceryCalculator from '../Screens/GroceryCalculator';
 import DebtCalculator from '../Screens/DebtCalculator';
 import TravelCalculator from '../Screens/TravelCalculator';
-import StudentLoanCalculator from '../Components/StudentLoanCalculator';
+import StudentLoanCalculator from '../Screens/StudentLoanCalculator';
 
 // Additional Settings/Menu Screens
 import CreditReportRequestForm from '../Screens/CreditReport';
