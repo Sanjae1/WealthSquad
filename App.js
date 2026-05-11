@@ -82,16 +82,6 @@ const App = () => {
               }}
           />
 
-          {/* Example of how to add standalone screens outside the tab navigation */}
-          {/* <Stack.Screen
-              name="StandaloneBudget"
-              component={BudgetPlanner}
-              options={{
-                  headerShown: true,
-                  title: 'Budget Planner',
-              }}
-          /> */}
-
         </Stack.Navigator>
       </NavigationContainer>
     </SessionContextProvider>
