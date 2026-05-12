@@ -68,6 +68,7 @@ const Signup = () => {
           data: {
             first_name: firstName,
             last_name: lastName,
+            full_name: `${firstName} ${lastName}`,
             signed_up_at: new Date().toISOString(),
           }
         }

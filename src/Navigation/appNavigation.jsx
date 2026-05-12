@@ -16,7 +16,7 @@ import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityI
 import Home from '../Screens/Home';
 import AccountTransactionsScreen from '../Screens/AccountTransactionsScreen';
 import Calculators from '../Screens/Calculators';
-import transactionsScreen from '../Screens/TransactionsScreen';
+import TransactionsScreen from '../Screens/TransactionsScreen';
 import BudgetPlanner from '../Screens/BudgetPlanner';
 import Settings from '../Screens/Settings.jsx';
 import FinanceTips from '../Screens/FinanceTips';
@@ -179,7 +179,7 @@ const AppNavigator = () => (
     {/* Transactions Tab */}
     <Tab.Screen
       name="TransactionsTab"
-      component={transactionsScreen}
+      component={TransactionsScreen}
       options={{
         tabBarLabel: 'Transactions',
         tabBarIcon: ({ color, size }) => (

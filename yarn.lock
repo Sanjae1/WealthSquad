@@ -3615,6 +3615,11 @@ expo-keep-awake@~14.0.1:
   resolved "https://registry.npmjs.org/expo-keep-awake/-/expo-keep-awake-14.0.1.tgz"
   integrity sha512-c5mGCAIk2YM+Vsdy90BlEJ4ZX+KG5Au9EkJUIxXWlpnuKmDAJ3N+5nEZ7EUO1ZTheqoSBeAo4jJ8rTWPU+JXdw==
 
+expo-linear-gradient@^55.0.13:
+  version "55.0.13"
+  resolved "https://registry.npmjs.org/expo-linear-gradient/-/expo-linear-gradient-55.0.13.tgz"
+  integrity sha512-Qz2T4jpkA15RIk29DBqI1TwW+8O9AN8MyC4TJPbh/5UnihH0yNNz3waplUO8Szh5OZ3czTGvtPQU4ysF3RDxwQ==
+
 expo-linking@*:
   version "7.0.5"
   resolved "https://registry.npmjs.org/expo-linking/-/expo-linking-7.0.5.tgz"
