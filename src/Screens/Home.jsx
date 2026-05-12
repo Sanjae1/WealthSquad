@@ -9,7 +9,7 @@
  */
 
 import React, { useState, useCallback } from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Alert, ActivityIndicator, FlatList } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialIcons'; // Using MaterialIcons as per original
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
@@ -208,38 +208,42 @@ const Home = () => {
               
               {/* List of Bank Accounts */}
               {accounts.length > 0 ? (
-                accounts.map((account) => (
-                  <TouchableOpacity 
-                    key={account.id} 
-                    style={styles.accountItem}
-                    onPress={() => navigation.navigate('AccountTransactions', { account })}
-                    activeOpacity={0.7}
-                  >
-                    <View style={styles.accountInfo}>
-                      <Text style={styles.accountName}>{account.account_name || 'Unnamed Account'}</Text>
-                      <Text style={styles.accountNumber}>
-                        {account.last_four_digits ? `****${account.last_four_digits}` : 'No account number'}
-                      </Text>
-                    </View>
-                    <View style={styles.accountActions}>
-                      <Text style={[
-                        styles.accountBalance,
-                        { color: (account.balance || 0) >= 0 ? '#4CAF50' : '#E74C3C' }
-                      ]}>
-                        {formatBalance(account.balance)}
-                      </Text>
-                      <TouchableOpacity 
-                        onPress={(e) => {
-                          e.stopPropagation();
-                          handleUnlinkAccount(account.id);
-                        }}
-                        style={styles.unlinkButton}
-                      >
-                        <Icon name="link-off" size={20} color="#E74C3C" />
-                      </TouchableOpacity>
-                    </View>
-                  </TouchableOpacity>
-                ))
+                <FlatList
+                  data={accounts}
+                  scrollEnabled={false}
+                  keyExtractor={(item) => item.id}
+                  renderItem={({ item: account }) => (
+                    <TouchableOpacity
+                      style={styles.accountItem}
+                      onPress={() => navigation.navigate('AccountTransactions', { account })}
+                      activeOpacity={0.7}
+                    >
+                      <View style={styles.accountInfo}>
+                        <Text style={styles.accountName}>{account.account_name || 'Unnamed Account'}</Text>
+                        <Text style={styles.accountNumber}>
+                          {account.last_four_digits ? `****${account.last_four_digits}` : 'No account number'}
+                        </Text>
+                      </View>
+                      <View style={styles.accountActions}>
+                        <Text style={[
+                          styles.accountBalance,
+                          { color: (account.balance || 0) >= 0 ? '#4CAF50' : '#E74C3C' }
+                        ]}>
+                          {formatBalance(account.balance)}
+                        </Text>
+                        <TouchableOpacity
+                          onPress={(e) => {
+                            e.stopPropagation();
+                            handleUnlinkAccount(account.id);
+                          }}
+                          style={styles.unlinkButton}
+                        >
+                          <Icon name="link-off" size={20} color="#E74C3C" />
+                        </TouchableOpacity>
+                      </View>
+                    </TouchableOpacity>
+                  )}
+                />
               ) : (
                 <Text style={styles.noAccountsText}>No accounts added yet</Text>
               )}

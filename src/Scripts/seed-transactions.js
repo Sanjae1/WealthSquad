@@ -1,5 +1,5 @@
 // scripts/seed-transactions.js
-require('dotenv').config();
+require('dotenv').config({ path: '.env' });
 const { createClient } = require('@supabase/supabase-js');
 const { faker } = require('@faker-js/faker');
 

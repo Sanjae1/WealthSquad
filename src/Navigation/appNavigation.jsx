@@ -30,6 +30,7 @@ import GroceryCalculator from '../Screens/GroceryCalculator';
 import DebtCalculator from '../Screens/DebtCalculator';
 import TravelCalculator from '../Screens/TravelCalculator';
 import StudentLoanCalculator from '../Screens/StudentLoanCalculator';
+import CreditCardPayoffCalculator from '../Screens/CreditCardPayoffCalculator';
 
 // Additional Settings/Menu Screens
 import CreditReportRequestForm from '../Screens/CreditReport';
@@ -91,6 +92,7 @@ const CalculatorStackNavigator = () => (
     <CalculatorStack.Screen name="Grocery" component={GroceryCalculator} options={{ title: 'Grocery Calculator' }}/>
     <CalculatorStack.Screen name="Debt" component={DebtCalculator} options={{ title: 'Debt Calculator' }}/>
     <CalculatorStack.Screen name="Travel" component={TravelCalculator} options={{ title: 'Travel Calculator' }}/>
+    <CalculatorStack.Screen name="CreditCardPayoff" component={CreditCardPayoffCalculator} options={{ title: 'Credit Card Payoff' }}/>
   </CalculatorStack.Navigator>
 );
 
