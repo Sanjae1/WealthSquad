@@ -35,6 +35,15 @@ import CreditCardPayoffCalculator from '../Screens/CreditCardPayoffCalculator';
 // Additional Settings/Menu Screens
 import CreditReportRequestForm from '../Screens/CreditReport';
 
+// Bill Pay Screens
+import BillPayDashboard from '../Screens/BillPayDashboard';
+import SubscriptionDetails from '../Screens/SubscriptionDetails';
+import SubscriptionTracker from '../Screens/SubscriptionTracker';
+import PaymentHistory from '../Screens/PaymentHistory';
+import NotificationSettings from '../Screens/NotificationSettings';
+import BillDetails from '../Screens/BillDetails';
+import PayBill from '../Screens/PayBill';
+
 // --- Navigator Definitions ---
 // Create navigators for different sections of the app
 const Tab = createBottomTabNavigator();
@@ -42,6 +51,26 @@ const CalculatorStack = createStackNavigator();
 const MenuStack = createStackNavigator();
 const TipsStack = createStackNavigator();
 const HomeStack = createStackNavigator();
+const BillStack = createStackNavigator();
+
+/**
+ * Bill Pay Stack Navigator
+ */
+const BillStackNavigator = () => (
+  <BillStack.Navigator>
+    <BillStack.Screen
+      name="BillPayDashboard"
+      component={BillPayDashboard}
+      options={{ headerShown: false }}
+    />
+    <BillStack.Screen name="SubscriptionDetails" component={SubscriptionDetails} options={{ title: 'Subscription' }} />
+    <BillStack.Screen name="SubscriptionTracker" component={SubscriptionTracker} options={{ title: 'Subscriptions' }} />
+    <BillStack.Screen name="PaymentHistory" component={PaymentHistory} options={{ title: 'History' }} />
+    <BillStack.Screen name="NotificationSettings" component={NotificationSettings} options={{ title: 'Notifications' }} />
+    <BillStack.Screen name="BillDetails" component={BillDetails} options={{ title: 'Bill Details' }} />
+    <BillStack.Screen name="PayBill" component={PayBill} options={{ title: 'Pay Bill' }} />
+  </BillStack.Navigator>
+);
 
 /**
  * Home Stack Navigator
@@ -201,6 +230,18 @@ const AppNavigator = () => (
         ),
         headerShown: true,
         title: 'Budget Planner'
+      }}
+    />
+
+    {/* Bill Pay Tab */}
+    <Tab.Screen
+      name="BillPayTab"
+      component={BillStackNavigator}
+      options={{
+        tabBarLabel: 'Bills',
+        tabBarIcon: ({ color, size }) => (
+          <MaterialCommunityIcons name="receipt" color={color} size={size} />
+        ),
       }}
     />
 

@@ -40,7 +40,7 @@ const CreditCardPayoffCalculator = () => {
         const monthlyInterest = bal * rate;
         if (pmt <= monthlyInterest) {
             setResult({
-                error: \`Payment (\$\${pmt.toFixed(2)}) must exceed monthly interest (\$\${monthlyInterest.toFixed(2)}). Minimum payment: \$\${(monthlyInterest + 0.01).toFixed(2)}\`
+                error: `Payment (\$${pmt.toFixed(2)}) must exceed monthly interest (\$${monthlyInterest.toFixed(2)}). Minimum payment: \$${(monthlyInterest + 0.01).toFixed(2)}`
             });
             return;
         }
@@ -127,7 +127,7 @@ const CreditCardPayoffCalculator = () => {
     };
 
     const formatCurrency = (value) => {
-        return \`\$\${value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}\`;
+        return `\$${value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
     };
 
     const renderScheduleItem = ({ item }) => (
@@ -272,7 +272,7 @@ const CreditCardPayoffCalculator = () => {
                                 <FlatList
                                     data={result.comparisons}
                                     renderItem={renderComparisonItem}
-                                    keyExtractor={(item, index) => \`comp-\${index}\`}
+                                    keyExtractor={(item, index) => `comp-${index}`}
                                     scrollEnabled={false}
                                 />
                                 <Text style={styles.comparisonNote}>Highlighted row shows your current payment plan</Text>
@@ -309,7 +309,7 @@ const CreditCardPayoffCalculator = () => {
                                 <FlatList
                                     data={result.schedule}
                                     renderItem={renderScheduleItem}
-                                    keyExtractor={(item) => \`month-\${item.month}\`}
+                                    keyExtractor={(item) => `month-${item.month}`}
                                     scrollEnabled={false}
                                     maxToRenderPerBatch={12}
                                 />
