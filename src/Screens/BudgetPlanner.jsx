@@ -86,7 +86,7 @@ const BudgetPlanner = () => {
     setExpenses(expenses.filter(e => e.id !== id));
   };
 
-  const formatCurrency = (val) => \`\$\${parseFloat(val || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}\`;
+  const formatCurrency = (val) => `$${parseFloat(val || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
 
   return (
     <View style={styles.container}>
@@ -109,7 +109,7 @@ const BudgetPlanner = () => {
             <View style={styles.progressContainer}>
                 <View style={styles.progressBarBg}>
                     <View style={[styles.progressBarFill, {
-                        width: \`\${Math.min(percentUsed, 100)}%\`,
+                        width: `${Math.min(percentUsed, 100)}%`,
                         backgroundColor: percentUsed > 90 ? '#EF4444' : '#10B981'
                     }]} />
                 </View>
@@ -147,7 +147,7 @@ const BudgetPlanner = () => {
                     data={chartData}
                     width={width - 40}
                     height={200}
-                    chartConfig={{ color: (opacity = 1) => \`rgba(0, 0, 0, \${opacity})\` }}
+                    chartConfig={{ color: (opacity = 1) => `rgba(0, 0, 0, ${opacity})` }}
                     accessor="amount"
                     backgroundColor="transparent"
                     paddingLeft="15"

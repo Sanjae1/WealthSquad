@@ -32,7 +32,7 @@ import { MyColours } from '../Utils/MyColours';
 
 const { width } = Dimensions.get('window');
 
-const DebtDashboard = () => {
+const DebtCalculator = () => {
     const navigation = useNavigation();
 
     // State
@@ -105,7 +105,7 @@ const DebtDashboard = () => {
         setDebts(debts.filter(d => d.id !== id));
     };
 
-    const formatCurrency = (val) => \`\$\${parseFloat(val || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}\`;
+    const formatCurrency = (val) => `$${parseFloat(val || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
 
     return (
         <SafeAreaView style={styles.container}>
@@ -330,4 +330,4 @@ const styles = StyleSheet.create({
     saveBtnText: { color: '#fff', fontWeight: '700' }
 });
 
-export default DebtDashboard;
+export default DebtCalculator;
