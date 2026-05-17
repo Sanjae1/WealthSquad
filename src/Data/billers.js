@@ -1446,8 +1446,30 @@ export const getUpcomingRenewals = (subscriptions, days = 7) => {
 };
 
 // Calendar event generation
-export const generateCalendarEvents = (bills, subscriptions) => {
+export const generateCalendarEvents = (bills, subscriptions, debts = []) => {
     const events = [];
+
+    // Debt events
+    debts.forEach(debt => {
+        const year = new Date().getFullYear();
+        const month = String(new Date().getMonth() + 1).padStart(2, '0');
+        const day = String(debt.dueDate || '20').padStart(2, '0');
+        const date = `${year}-${month}-${day}`;
+
+        events.push({
+            id: `evt_debt_due_${debt.id}`,
+            type: 'bill_due',
+            sourceType: 'debt',
+            sourceId: debt.id,
+            date: date,
+            title: `${debt.name} Payment`,
+            subtitle: formatJMD(parseFloat(debt.currentPayment || debt.minPayment || 0)),
+            description: `Debt Payoff Priority Target`,
+            color: '#1E293B',
+            icon: 'credit-card',
+            status: 'upcoming'
+        });
+    });
 
     // Bill events
     bills.forEach(bill => {

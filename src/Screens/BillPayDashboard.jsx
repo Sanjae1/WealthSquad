@@ -50,6 +50,7 @@ const BillPayDashboard = () => {
     const navigation = useNavigation();
     const [bills, setBills] = useState(SAMPLE_BILLS);
     const [subscriptions, setSubscriptions] = useState(SAMPLE_SUBSCRIPTIONS);
+    const [debts, setDebts] = useState([]); // Integrated debts
     const [viewMode, setViewMode] = useState('list'); // 'list', 'calendar', 'subscriptions'
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [unreadNotifications, setUnreadNotifications] = useState(3);
@@ -124,9 +125,14 @@ const BillPayDashboard = () => {
         [upcomingRenewals]
     );
 
+    const totalDebtsDue = useMemo(() =>
+        debts.reduce((sum, d) => sum + (parseFloat(d.currentPayment || d.minPayment) || 0), 0),
+        [debts]
+    );
+
     const totalMonthlyObligations = useMemo(() =>
-        totalBillsDue + totalSubsDue,
-        [totalBillsDue, totalSubsDue]
+        totalBillsDue + totalSubsDue + totalDebtsDue,
+        [totalBillsDue, totalSubsDue, totalDebtsDue]
     );
 
     const monthlySubCost = useMemo(() =>
@@ -134,10 +140,10 @@ const BillPayDashboard = () => {
         [subscriptions]
     );
 
-    // Calendar events
+    // Calendar events - unified with debts
     const calendarEvents = useMemo(() =>
-        generateCalendarEvents(bills, subscriptions),
-        [bills, subscriptions]
+        generateCalendarEvents(bills, subscriptions, debts),
+        [bills, subscriptions, debts]
     );
 
     const todayEvents = useMemo(() =>
