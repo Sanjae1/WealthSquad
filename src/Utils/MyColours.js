@@ -1,5 +1,18 @@
-export const MyColours={
-  primary: "#53b175",
-  secondary: "white",
-  third: "black",
-}
+export const MyColours = {
+    primary: "#53b175",
+    primaryLight: "#e8f5e9",
+    secondary: "white",
+    third: "black",
+    background: "#F5F5F5",
+    surface: "#FFFFFF",
+    textPrimary: "#333333",
+    textSecondary: "#757575",
+    textTertiary: "#AAAAAA",
+    border: "#E0E0E0",
+    divider: "#EEEEEE",
+    success: "#4CAF50",
+    error: "#E53935",
+    warning: "#E67E22",
+    info: "#2196F3",
+    grey: "#9E9E9E",
+};

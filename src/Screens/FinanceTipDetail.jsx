@@ -14,8 +14,8 @@ import {
 } from 'react-native';
 import { Headline, Subheading, Paragraph, Caption, Button, Divider, Chip, Title } from 'react-native-paper';
 import Icon from 'react-native-vector-icons/MaterialIcons';
-import { supabase } from '../../supabaseClient';
-import StudentLoanCalculator from '../Components/StudentLoanCalculator'; // Adjust path if needed
+import { supabase } from '../Services/supabaseClient';
+import StudentLoanCalculator from './StudentLoanCalculator'; // Adjust path if needed
 
 const screenWidth = Dimensions.get('window').width;
 

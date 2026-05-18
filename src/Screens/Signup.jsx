@@ -4,7 +4,7 @@ import React, { useState, useRef } from 'react';
 import { MyColours } from '../Utils/MyColours';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
-import { supabase } from '../../supabaseClient';
+import { supabase } from '../Services/supabaseClient';
 
 const Signup = () => {
   const nav = useNavigation();
@@ -55,29 +55,6 @@ const Signup = () => {
     return true;
   };
 
-  const insertUserData = async (userId) => {
-    try {
-      const { data, error } = await supabase
-        .from('Users')
-        .insert([
-          { 
-            user_id: userId,
-            email: email,
-            first_name: firstName,
-            last_name: lastName,
-            created_at: new Date().toISOString(),
-            // Add any additional user data fields you need
-          }
-        ]);
-
-      if (error) throw error;
-      return data;
-    } catch (error) {
-      console.error('Error inserting user data:', error);
-      throw error;
-    }
-  };
-
   const signUpUser = async () => {
     Keyboard.dismiss();
     if (!validateInputs()) return;
@@ -91,6 +68,7 @@ const Signup = () => {
           data: {
             first_name: firstName,
             last_name: lastName,
+            full_name: `${firstName} ${lastName}`,
             signed_up_at: new Date().toISOString(),
           }
         }
@@ -116,20 +94,11 @@ const Signup = () => {
       }
   
       if (data?.user) {
-        try {
-          await insertUserData(data.user.id);
-          Alert.alert(
-            'Success',
-            'Registration successful! Please check your email for verification.',
-            [{ text: 'OK', onPress: () => nav.navigate('Login') }]
-          );
-        } catch (dbError) {
-          console.error('Database error:', dbError);
-          Alert.alert(
-            'Warning',
-            'Account created but there was an error saving additional data.'
-          );
-        }
+        Alert.alert(
+          'Success',
+          'Registration successful! Please check your email for verification.',
+          [{ text: 'OK', onPress: () => nav.navigate('Login') }]
+        );
       }
     } catch (error) {
       Alert.alert('Error', 'An unexpected error occurred. Please try again.');

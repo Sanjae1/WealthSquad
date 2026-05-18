@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { useNavigation } from '@react-navigation/native';
@@ -35,6 +35,18 @@ const Settings = () => {
       label: 'Profile Settings',
       icon: 'person',
       onPress: () => navigation.navigate('Profile'),
+    },
+    {
+      id: 'calculators',
+      label: 'Financial Calculators',
+      icon: 'calculate',
+      onPress: () => navigation.navigate('Calculators'),
+    },
+    {
+      id: 'tips',
+      label: 'Finance Tips',
+      icon: 'lightbulb',
+      onPress: () => navigation.navigate('FinanceTips'),
     },
     {
       id: 'notifications',
@@ -78,27 +90,31 @@ const Settings = () => {
     },
   ];
 
+  const renderSettingItem = ({ item }) => (
+    <TouchableOpacity
+      style={styles.settingsItem}
+      onPress={item.onPress}
+    >
+      <View style={styles.settingsItemContent}>
+        <Icon name={item.icon} size={24} color="#4CAF50" />
+        <Text style={styles.settingsItemLabel}>{item.label}</Text>
+      </View>
+      <Icon name="chevron-right" size={24} color="#757575" />
+    </TouchableOpacity>
+  );
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Settings</Text>
       </View>
 
-      <ScrollView style={styles.settingsContainer}>
-        {settingsOptions.map((option) => (
-          <TouchableOpacity
-            key={option.id}
-            style={styles.settingsItem}
-            onPress={option.onPress}
-          >
-            <View style={styles.settingsItemContent}>
-              <Icon name={option.icon} size={24} color="#4CAF50" />
-              <Text style={styles.settingsItemLabel}>{option.label}</Text>
-            </View>
-            <Icon name="chevron-right" size={24} color="#757575" />
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
+      <FlatList
+        style={styles.settingsContainer}
+        data={settingsOptions}
+        renderItem={renderSettingItem}
+        keyExtractor={(item) => item.id}
+      />
     </SafeAreaView>
   );
 };

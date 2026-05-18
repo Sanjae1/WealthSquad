@@ -93,6 +93,14 @@ const Calculators = () => {
       color: '#00BCD4',
       description: 'Plan your trip expenses.',
     },
+    {
+      title: 'CC Payoff',
+      fullName: 'Credit Card Payoff Calculator',
+      route: 'CreditCardPayoff',
+      iconName: 'credit-card-check-outline',
+      color: '#4F46E5',
+      description: 'Calculate your CC payoff.',
+    },
   ];
 
   const renderCalculatorCard = ({ item }) => (

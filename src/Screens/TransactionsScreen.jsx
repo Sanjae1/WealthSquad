@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { View, Text, FlatList, StyleSheet, ActivityIndicator } from 'react-native'
-import { supabase } from '../../supabaseClient'
+import { supabase } from '../Services/supabaseClient'
 
 const TransactionsScreen = () => {
   const [transactions, setTransactions] = useState([])

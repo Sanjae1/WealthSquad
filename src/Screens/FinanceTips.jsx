@@ -11,7 +11,7 @@ import {
   ScrollView, // For categories
 } from 'react-native';
 import { Card, Searchbar, Chip, Title, Paragraph, Caption, Subheading } from 'react-native-paper';
-import { supabase } from '../../supabaseClient';
+import { supabase } from '../Services/supabaseClient';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 
 const screenWidth = Dimensions.get('window').width;
