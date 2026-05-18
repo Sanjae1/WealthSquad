@@ -37,6 +37,18 @@ const Settings = () => {
       onPress: () => navigation.navigate('Profile'),
     },
     {
+      id: 'calculators',
+      label: 'Financial Calculators',
+      icon: 'calculate',
+      onPress: () => navigation.navigate('Calculators'),
+    },
+    {
+      id: 'tips',
+      label: 'Finance Tips',
+      icon: 'lightbulb',
+      onPress: () => navigation.navigate('FinanceTips'),
+    },
+    {
       id: 'notifications',
       label: 'Notifications',
       icon: 'notifications',

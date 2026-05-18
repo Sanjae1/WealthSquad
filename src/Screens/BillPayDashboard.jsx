@@ -345,7 +345,7 @@ const BillPayDashboard = () => {
 
                         <TouchableOpacity
                             style={styles.quickStatCard}
-                            onPress={() => navigation.navigate('SubscriptionTracker')}
+                            onPress={() => navigation.navigate('BudgetPlanner')}
                         >
                             <TrendingUp size={20} color="#4CAF50" />
                             <Text style={styles.quickStatNumber}>{formatJMD(monthlySubCost)}</Text>
@@ -354,7 +354,7 @@ const BillPayDashboard = () => {
 
                         <TouchableOpacity
                             style={styles.quickStatCard}
-                            onPress={() => navigation.navigate('PaymentHistory')}
+                            onPress={() => navigation.navigate('PaymentHistory', { bills, subscriptions })}
                         >
                             <CheckCircle2 size={20} color="#2196F3" />
                             <Text style={styles.quickStatNumber}>{paidBills.length}</Text>
@@ -428,6 +428,7 @@ const BillPayDashboard = () => {
                         <BillCalendar
                             bills={bills}
                             subscriptions={subscriptions}
+                            debts={debts}
                             onBillClick={handleBillClick}
                             onSubscriptionClick={(sub) => navigation.navigate('SubscriptionDetails', { subscription: sub })}
                         />
@@ -563,7 +564,7 @@ const BillPayDashboard = () => {
                             <View style={styles.section}>
                                 <View style={styles.sectionHeader}>
                                     <Text style={styles.sectionTitle}>Recently Paid</Text>
-                                    <TouchableOpacity onPress={() => navigation.navigate('PaymentHistory')}>
+                                    <TouchableOpacity onPress={() => navigation.navigate('PaymentHistory', { bills, subscriptions })}>
                                         <Text style={styles.seeAllText}>History</Text>
                                     </TouchableOpacity>
                                 </View>

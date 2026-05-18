@@ -258,8 +258,8 @@ const Home = () => {
             <TouchableOpacity onPress={() => navigation.navigate('SelectBankScreen')}>
               <ActionButton icon="add" label="Add Account" />
             </TouchableOpacity>
-            <TouchableOpacity onPress={() => navigation.navigate('BudgetTab')}>
-              <ActionButton icon="attach-money" label="Budget" />
+            <TouchableOpacity onPress={() => navigation.navigate('PlanningTab')}>
+              <ActionButton icon="attach-money" label="Planning" />
             </TouchableOpacity>
             <ActionButton icon="trending-up" label="Investments" />
           </View>

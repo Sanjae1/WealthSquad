@@ -28,8 +28,18 @@ import SelectFakeAccountsScreen from './src/Screens/FakeAccountScreen';
 const Stack = createNativeStackNavigator();
 
 import { supabase } from './src/Services/supabaseClient';
+import { notificationManager } from './src/Services/NotificationManager';
+import { useNavigationContainerRef } from '@react-navigation/native';
 
 const App = () => {
+  const navigationRef = useNavigationContainerRef();
+
+  React.useEffect(() => {
+    notificationManager.requestPermissions();
+    notificationManager.setupListeners(navigationRef);
+    return () => notificationManager.removeListeners();
+  }, []);
+
   // Function to handle app exit when back button is pressed
   const handleExit = () => {
     BackHandler.exitApp();
@@ -41,7 +51,7 @@ const App = () => {
   return (
     // Wrap the entire app with Supabase session context
     <SessionContextProvider supabaseClient={supabase}>
-      <NavigationContainer>
+      <NavigationContainer ref={navigationRef}>
         <Stack.Navigator
           initialRouteName="Splash"
           screenOptions={{

@@ -55,7 +55,7 @@ const EVENT_ICONS = {
     reminder: Bell
 };
 
-const BillCalendar = ({ bills, subscriptions, onBillClick, onSubscriptionClick }) => {
+const BillCalendar = ({ bills, subscriptions, debts = [], onBillClick, onSubscriptionClick }) => {
     const [currentDate, setCurrentDate] = useState(new Date());
     const [selectedDate, setSelectedDate] = useState(null);
     const [showDayModal, setShowDayModal] = useState(false);
@@ -63,8 +63,8 @@ const BillCalendar = ({ bills, subscriptions, onBillClick, onSubscriptionClick }
 
     // Generate all calendar events
     const allEvents = useMemo(() => {
-        return generateCalendarEvents(bills, subscriptions);
-    }, [bills, subscriptions]);
+        return generateCalendarEvents(bills, subscriptions, debts);
+    }, [bills, subscriptions, debts]);
 
     // Filtered events
     const filteredEvents = useMemo(() => {
